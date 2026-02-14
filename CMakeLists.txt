@@ -11,7 +11,6 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(SFML)
 
-# Список всех исходных файлов проекта
 set(SOURCES
     src/main.cpp
     src/Figure.cpp

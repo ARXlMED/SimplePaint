@@ -11,7 +11,7 @@ public:
     void addFigure(std::unique_ptr<Figure> fig);
     void removeSelected();
     Figure* getSelected() const;
-    void handleScale(float delta); // delta > 0 увеличить, < 0 уменьшить
+    void handleScale(float delta); 
 
 private:
     std::vector<std::unique_ptr<Figure>> figures;

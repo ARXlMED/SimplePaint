@@ -37,9 +37,7 @@ const std::vector<float>& Figure::getThicknesses() const {
     return thicknesses;
 }
 
-void Figure::drawThickLine(sf::RenderWindow& window, const sf::Vector2f& A,
-                           const sf::Vector2f& B, float thickness,
-                           const sf::Color& color) const {
+void Figure::drawThickLine(sf::RenderWindow& window, const sf::Vector2f& A, const sf::Vector2f& B, float thickness, const sf::Color& color) const {
     sf::Vector2f dir = B - A;
     float len = std::sqrt(dir.x * dir.x + dir.y * dir.y);
     if (len == 0) return;
@@ -57,8 +55,7 @@ void Figure::drawThickLine(sf::RenderWindow& window, const sf::Vector2f& A,
     window.draw(polygon);
 }
 
-void Figure::drawVertexCircle(sf::RenderWindow& window, const sf::Vector2f& vertex,
-                              float radius, const sf::Color& color) const {
+void Figure::drawVertexCircle(sf::RenderWindow& window, const sf::Vector2f& vertex, float radius, const sf::Color& color) const {
     sf::CircleShape circle(radius);
     circle.setOrigin(radius, radius);
     circle.setPosition(vertex);

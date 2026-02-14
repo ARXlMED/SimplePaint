@@ -1,10 +1,11 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
-#include <thread>
-#include <mutex>
-#include <queue>
+#include <vector>
+#include <memory>
 #include <sstream>
 #include <iomanip>
+#include <cmath>
+
 #include "Editor.hpp"
 #include "Rectangle.hpp"
 #include "Triangle.hpp"
@@ -13,148 +14,301 @@
 #include "Pentagon.hpp"
 #include "Hexagon.hpp"
 
-// Очередь команд из консольного потока
-std::queue<std::string> commandQueue;
-std::mutex queueMutex;
+enum class ShapeType {
+    Rectangle,
+    Triangle,
+    Trapezoid,
+    Circle,
+    Pentagon,
+    Hexagon
+};
 
-// Функция консольного ввода (работает в отдельном потоке)
-void consoleInputThread() {
-    std::string line;
-    while (true) {
-        std::cout << "Enter command (add <type> ... or quit): ";
-        std::getline(std::cin, line);
-        if (line == "quit") break;
-        std::lock_guard<std::mutex> lock(queueMutex);
-        commandQueue.push(line);
-    }
-}
-
-// Разбор команды и создание фигуры
-std::unique_ptr<Figure> parseCommand(const std::string& cmd) {
-    std::istringstream iss(cmd);
-    std::string command;
-    iss >> command;
-    if (command != "add") return nullptr;
-
-    std::string type;
-    iss >> type;
-
-    float r, g, b;
-    int numThick = 0;
-    std::vector<float> thicknesses;
-
-    if (type == "rectangle") {
-        float w, h;
-        iss >> w >> h >> r >> g >> b;
-        for (int i = 0; i < 4; ++i) { float t; iss >> t; thicknesses.push_back(t); }
-        if (iss.fail()) return nullptr;
-        return std::make_unique<Rectangle>(w, h, sf::Color(r*255, g*255, b*255), thicknesses);
-    }
-    else if (type == "triangle") {
-        float side;
-        iss >> side >> r >> g >> b;
-        for (int i = 0; i < 3; ++i) { float t; iss >> t; thicknesses.push_back(t); }
-        if (iss.fail()) return nullptr;
-        return std::make_unique<Triangle>(side, sf::Color(r*255, g*255, b*255), thicknesses);
-    }
-    else if (type == "trapezoid") {
-        float top, bottom, height;
-        iss >> top >> bottom >> height >> r >> g >> b;
-        for (int i = 0; i < 4; ++i) { float t; iss >> t; thicknesses.push_back(t); }
-        if (iss.fail()) return nullptr;
-        return std::make_unique<Trapezoid>(top, bottom, height, sf::Color(r*255, g*255, b*255), thicknesses);
-    }
-    else if (type == "circle") {
-        float radius;
-        iss >> radius >> r >> g >> b;
-        float t; iss >> t; thicknesses.push_back(t);
-        if (iss.fail()) return nullptr;
-        return std::make_unique<Circle>(radius, sf::Color(r*255, g*255, b*255), thicknesses);
-    }
-    else if (type == "pentagon") {
-        float radius;
-        iss >> radius >> r >> g >> b;
-        for (int i = 0; i < 5; ++i) { float t; iss >> t; thicknesses.push_back(t); }
-        if (iss.fail()) return nullptr;
-        return std::make_unique<Pentagon>(radius, sf::Color(r*255, g*255, b*255), thicknesses);
-    }
-    else if (type == "hexagon") {
-        float radius;
-        iss >> radius >> r >> g >> b;
-        for (int i = 0; i < 6; ++i) { float t; iss >> t; thicknesses.push_back(t); }
-        if (iss.fail()) return nullptr;
-        return std::make_unique<Hexagon>(radius, sf::Color(r*255, g*255, b*255), thicknesses);
-    }
-    return nullptr;
+std::string colorToString(const sf::Color& c) {
+    std::ostringstream oss;
+    oss << "R:" << (int)c.r << " G:" << (int)c.g << " B:" << (int)c.b;
+    return oss.str();
 }
 
 int main() {
-    sf::RenderWindow window(sf::VideoMode(1200, 800), "Simple Paint (Console)");
+    sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "Simple Paint (Fullscreen)", sf::Style::Fullscreen);
     window.setFramerateLimit(60);
     Editor editor;
 
-    // Запускаем поток консольного ввода
-    std::thread inputThread(consoleInputThread);
+    ShapeType currentShape = ShapeType::Rectangle;
+    float rectWidth = 150, rectHeight = 100;
+    float triSide = 120;
+    float trapTop = 80, trapBottom = 140, trapHeight = 100;
+    float circleRadius = 70;
+    float pentRadius = 80;
+    float hexRadius = 80;
 
-    sf::Clock deltaClock;
+    sf::Color currentColor = sf::Color::White;
+    std::vector<float> currentThicknesses(6, 2.0f);
+
+    int selectedThicknessIndex = 0;
+
+    sf::Font font;
+    std::vector<std::string> fontPaths = {
+        "resources/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+        "/usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf"
+    };
+    bool fontLoaded = false;
+    for (const auto& path : fontPaths) {
+        if (font.loadFromFile(path)) {
+            std::cout << "Loaded font: " << path << std::endl;
+            fontLoaded = true;
+            break;
+        } else {
+            std::cout << "Failed to load: " << path << std::endl;
+        }
+    }
+    if (!fontLoaded) {
+        std::cerr << "Error: no font loaded. Text will not be displayed." << std::endl;
+    }
+
+    sf::Text infoText;
+    infoText.setFont(font);
+    infoText.setCharacterSize(16);
+    infoText.setFillColor(sf::Color::White);
+    infoText.setPosition(10, 10);
+
+    sf::Text exitButton;
+    exitButton.setFont(font);
+    exitButton.setCharacterSize(28);
+    exitButton.setFillColor(sf::Color::Red);
+    exitButton.setString("X");
+    exitButton.setPosition(window.getSize().x - exitButton.getLocalBounds().width - 20, 10);
+
     while (window.isOpen()) {
         sf::Event event;
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed)
                 window.close();
 
-            // Обработка событий редактора (перемещение, выделение)
+            if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left) {
+                sf::Vector2i mousePos(event.mouseButton.x, event.mouseButton.y);
+                sf::FloatRect exitRect(exitButton.getPosition().x, exitButton.getPosition().y,
+                                        exitButton.getLocalBounds().width, exitButton.getLocalBounds().height);
+                if (exitRect.contains(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y))) {
+                    window.close();
+                }
+            }
+
             editor.handleEvent(event, window);
 
-            // Масштабирование колёсиком мыши
-            if (event.type == sf::Event::MouseWheelScrolled) {
-                if (event.mouseWheelScroll.wheel == sf::Mouse::VerticalWheel) {
-                    editor.handleScale(event.mouseWheelScroll.delta);
-                }
+            if (event.type == sf::Event::MouseWheelScrolled && editor.getSelected()) {
+                float delta = event.mouseWheelScroll.delta;
+                editor.handleScale(delta);
             }
 
-            // Горячие клавиши: Del удаляет выделенную фигуру
-            if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Delete) {
-                editor.removeSelected();
+            if (event.type == sf::Event::KeyPressed) {
+                switch (event.key.code) {
+                    case sf::Keyboard::Num1: currentShape = ShapeType::Rectangle; break;
+                    case sf::Keyboard::Num2: currentShape = ShapeType::Triangle; break;
+                    case sf::Keyboard::Num3: currentShape = ShapeType::Trapezoid; break;
+                    case sf::Keyboard::Num4: currentShape = ShapeType::Circle; break;
+                    case sf::Keyboard::Num5: currentShape = ShapeType::Pentagon; break;
+                    case sf::Keyboard::Num6: currentShape = ShapeType::Hexagon; break;
+
+                    case sf::Keyboard::Up:
+                        switch (currentShape) {
+                            case ShapeType::Rectangle: rectHeight += 5; break;
+                            case ShapeType::Triangle: triSide += 5; break;
+                            case ShapeType::Trapezoid: trapHeight += 5; break;
+                            case ShapeType::Circle: circleRadius += 2; break;
+                            case ShapeType::Pentagon: pentRadius += 2; break;
+                            case ShapeType::Hexagon: hexRadius += 2; break;
+                        }
+                        break;
+                    case sf::Keyboard::Down:
+                        switch (currentShape) {
+                            case ShapeType::Rectangle: rectHeight = std::max(10.0f, rectHeight - 5); break;
+                            case ShapeType::Triangle: triSide = std::max(10.0f, triSide - 5); break;
+                            case ShapeType::Trapezoid: trapHeight = std::max(10.0f, trapHeight - 5); break;
+                            case ShapeType::Circle: circleRadius = std::max(5.0f, circleRadius - 2); break;
+                            case ShapeType::Pentagon: pentRadius = std::max(5.0f, pentRadius - 2); break;
+                            case ShapeType::Hexagon: hexRadius = std::max(5.0f, hexRadius - 2); break;
+                        }
+                        break;
+                    case sf::Keyboard::Left:
+                        switch (currentShape) {
+                            case ShapeType::Rectangle: rectWidth = std::max(10.0f, rectWidth - 5); break;
+                            case ShapeType::Trapezoid: trapTop = std::max(10.0f, trapTop - 5); break;
+                            default: break;
+                        }
+                        break;
+                    case sf::Keyboard::Right:
+                        switch (currentShape) {
+                            case ShapeType::Rectangle: rectWidth += 5; break;
+                            case ShapeType::Trapezoid: trapTop += 5; break;
+                            default: break;
+                        }
+                        break;
+
+                    case sf::Keyboard::R: {
+                        if (event.key.shift) currentColor.r = std::min(255, currentColor.r + 10);
+                        else currentColor.r = std::max(0, currentColor.r - 10);
+                        break;
+                    }
+                    case sf::Keyboard::G: {
+                        if (event.key.shift) currentColor.g = std::min(255, currentColor.g + 10);
+                        else currentColor.g = std::max(0, currentColor.g - 10);
+                        break;
+                    }
+                    case sf::Keyboard::B: {
+                        if (event.key.shift) currentColor.b = std::min(255, currentColor.b + 10);
+                        else currentColor.b = std::max(0, currentColor.b - 10);
+                        break;
+                    }
+
+                    case sf::Keyboard::T: {
+                        int numSides = 0;
+                        switch (currentShape) {
+                            case ShapeType::Rectangle: numSides = 4; break;
+                            case ShapeType::Triangle: numSides = 3; break;
+                            case ShapeType::Trapezoid: numSides = 4; break;
+                            case ShapeType::Circle: numSides = 1; break;
+                            case ShapeType::Pentagon: numSides = 5; break;
+                            case ShapeType::Hexagon: numSides = 6; break;
+                        }
+                        if (numSides == 0) break;
+                        if (event.key.shift) {
+                            currentThicknesses[selectedThicknessIndex] = std::max(0.5f, currentThicknesses[selectedThicknessIndex] - 0.5f);
+                        } else {
+                            currentThicknesses[selectedThicknessIndex] += 0.5f;
+                        }
+                        break;
+                    }
+                    case sf::Keyboard::Y: {
+                        int numSides = 0;
+                        switch (currentShape) {
+                            case ShapeType::Rectangle: numSides = 4; break;
+                            case ShapeType::Triangle: numSides = 3; break;
+                            case ShapeType::Trapezoid: numSides = 4; break;
+                            case ShapeType::Circle: numSides = 1; break;
+                            case ShapeType::Pentagon: numSides = 5; break;
+                            case ShapeType::Hexagon: numSides = 6; break;
+                        }
+                        if (numSides > 0) {
+                            selectedThicknessIndex = (selectedThicknessIndex + 1) % numSides;
+                        }
+                        break;
+                    }
+
+                    case sf::Keyboard::Space: {
+                        std::vector<float> thicknesses;
+                        sf::Vector2u windowSize = window.getSize();
+                        sf::Vector2f center(windowSize.x / 2.f, windowSize.y / 2.f);
+                        std::unique_ptr<Figure> newFig;
+
+                        switch (currentShape) {
+                            case ShapeType::Rectangle:
+                                thicknesses.assign(currentThicknesses.begin(), currentThicknesses.begin()+4);
+                                newFig = std::make_unique<Rectangle>(rectWidth, rectHeight, currentColor, thicknesses);
+                                break;
+                            case ShapeType::Triangle:
+                                thicknesses.assign(currentThicknesses.begin(), currentThicknesses.begin()+3);
+                                newFig = std::make_unique<Triangle>(triSide, currentColor, thicknesses);
+                                break;
+                            case ShapeType::Trapezoid:
+                                thicknesses.assign(currentThicknesses.begin(), currentThicknesses.begin()+4);
+                                newFig = std::make_unique<Trapezoid>(trapTop, trapBottom, trapHeight, currentColor, thicknesses);
+                                break;
+                            case ShapeType::Circle:
+                                thicknesses = {currentThicknesses[0]};
+                                newFig = std::make_unique<Circle>(circleRadius, currentColor, thicknesses);
+                                break;
+                            case ShapeType::Pentagon:
+                                thicknesses.assign(currentThicknesses.begin(), currentThicknesses.begin()+5);
+                                newFig = std::make_unique<Pentagon>(pentRadius, currentColor, thicknesses);
+                                break;
+                            case ShapeType::Hexagon:
+                                thicknesses.assign(currentThicknesses.begin(), currentThicknesses.begin()+6);
+                                newFig = std::make_unique<Hexagon>(hexRadius, currentColor, thicknesses);
+                                break;
+                        }
+                        if (newFig) {
+                            newFig->setPosition(center);
+                            editor.addFigure(std::move(newFig));
+                        }
+                        break;
+                    }
+
+                    case sf::Keyboard::Delete:
+                        editor.removeSelected();
+                        break;
+
+                    default: break;
+                }
             }
         }
 
-        // Обрабатываем команды из консоли
-        {
-            std::lock_guard<std::mutex> lock(queueMutex);
-            while (!commandQueue.empty()) {
-                std::string cmd = commandQueue.front();
-                commandQueue.pop();
-                if (cmd == "quit") {
-                    window.close();
-                    break;
-                }
-                auto fig = parseCommand(cmd);
-                if (fig) {
-                    fig->setPosition({600, 400}); // центр окна
-                    editor.addFigure(std::move(fig));
-                    std::cout << "Figure added.\n";
-                } else {
-                    std::cout << "Invalid command. Examples:\n";
-                    std::cout << "add rectangle 200 150 1 0 0 2 2 2 2\n";
-                    std::cout << "add triangle 100 0 1 0 3 3 3\n";
-                    std::cout << "add trapezoid 80 120 100 0 0 1 2 2 2 2\n";
-                    std::cout << "add circle 60 1 1 0 3\n";
-                    std::cout << "add pentagon 70 0 1 0 2 2 2 2 2\n";
-                    std::cout << "add hexagon 70 0 1 1 1 2 3 4 5 6\n";
-                }
-            }
+        std::ostringstream oss;
+        oss << "Current shape: ";
+        switch (currentShape) {
+            case ShapeType::Rectangle: oss << "Rectangle"; break;
+            case ShapeType::Triangle: oss << "Triangle"; break;
+            case ShapeType::Trapezoid: oss << "Trapezoid"; break;
+            case ShapeType::Circle: oss << "Circle"; break;
+            case ShapeType::Pentagon: oss << "Pentagon"; break;
+            case ShapeType::Hexagon: oss << "Hexagon"; break;
+        }
+        oss << "\nColor: " << colorToString(currentColor);
+        oss << "\nThicknesses: ";
+        int numSides = 0;
+        switch (currentShape) {
+            case ShapeType::Rectangle: numSides = 4; break;
+            case ShapeType::Triangle: numSides = 3; break;
+            case ShapeType::Trapezoid: numSides = 4; break;
+            case ShapeType::Circle: numSides = 1; break;
+            case ShapeType::Pentagon: numSides = 5; break;
+            case ShapeType::Hexagon: numSides = 6; break;
+        }
+        for (int i = 0; i < numSides; ++i) {
+            if (i == selectedThicknessIndex)
+                oss << " [" << currentThicknesses[i] << "]";
+            else
+                oss << " " << currentThicknesses[i];
+        }
+        oss << "\nSize: ";
+        switch (currentShape) {
+            case ShapeType::Rectangle: oss << rectWidth << " x " << rectHeight; break;
+            case ShapeType::Triangle: oss << "side " << triSide; break;
+            case ShapeType::Trapezoid: oss << "top " << trapTop << " bottom " << trapBottom << " height " << trapHeight; break;
+            case ShapeType::Circle: oss << "radius " << circleRadius; break;
+            case ShapeType::Pentagon: oss << "radius " << pentRadius; break;
+            case ShapeType::Hexagon: oss << "radius " << hexRadius; break;
+        }
+        oss << "\n\nControls:\n"
+            << "1-6: select shape\n"
+            << "Arrow keys: adjust size\n"
+            << "R/G/B: decrease color (Shift+ increase)\n"
+            << "T: increase thickness of current side\n"
+            << "Shift+T: decrease thickness\n"
+            << "Y: next side\n"
+            << "Space: add shape at center\n"
+            << "Delete: remove selected\n"
+            << "Mouse wheel: scale selected\n"
+            << "X (top right): exit";
+
+        infoText.setString(oss.str());
+
+        float maxWidth = window.getSize().x - 20;
+        float maxHeight = window.getSize().y - 50;
+        while (infoText.getLocalBounds().width > maxWidth || infoText.getLocalBounds().height > maxHeight) {
+            if (infoText.getCharacterSize() <= 8) break;
+            infoText.setCharacterSize(infoText.getCharacterSize() - 1);
         }
 
-        // Обновление заголовка окна с подсказкой
-        std::string title = "Simple Paint - Commands in console";
-        window.setTitle(title);
+        exitButton.setPosition(window.getSize().x - exitButton.getLocalBounds().width - 20, 10);
 
-        window.clear(sf::Color(50, 50, 50));
+        window.clear(sf::Color(50,50,50));
         editor.draw(window);
+        window.draw(infoText);
+        window.draw(exitButton);
         window.display();
     }
-
-    inputThread.join(); // дожидаемся завершения потока ввода
     return 0;
 }
