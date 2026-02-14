@@ -11,5 +11,18 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(SFML)
 
-add_executable(${PROJECT_NAME} src/main.cpp)
-target_link_libraries(${PROJECT_NAME} sfml-graphics sfml-window sfml-system)
+# Список всех исходных файлов проекта
+set(SOURCES
+    src/main.cpp
+    src/Figure.cpp
+    src/Rectangle.cpp
+    src/Triangle.cpp
+    src/Trapezoid.cpp
+    src/Circle.cpp
+    src/Pentagon.cpp
+    src/Hexagon.cpp
+    src/Editor.cpp
+)
+
+add_executable(${PROJECT_NAME} ${SOURCES})
+target_link_libraries(${PROJECT_NAME} PRIVATE sfml-graphics sfml-window sfml-system)
