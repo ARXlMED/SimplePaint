@@ -19,10 +19,10 @@ void Circle::draw(sf::RenderWindow& window) const {
     float thickness = thicknesses[0];
     auto points = getPoints();
     for (int i = 0; i < segments; ++i) {
-        drawThickLine(window, points[i], points[i+1], thickness, lineColor);
+        drawThickLine(window, points[i], points[i+1], thickness, sideColors[0]);
     }
     for (int i = 0; i < segments; ++i) {
-        drawVertexCircle(window, points[i], thickness/2, lineColor);
+        drawVertexCircle(window, points[i], thickness/2, sideColors[0]);
     }
 }
 

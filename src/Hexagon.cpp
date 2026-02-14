@@ -26,11 +26,11 @@ void Hexagon::draw(sf::RenderWindow& window) const {
     auto verts = getGlobalVertices();
     for (int i = 0; i < 6; ++i) {
         int j = (i + 1) % 6;
-        drawThickLine(window, verts[i], verts[j], thicknesses[i], lineColor);
+        drawThickLine(window, verts[i], verts[j], thicknesses[i], sideColors[i]);
     }
     for (int i = 0; i < 6; ++i) {
         float r = std::max(thicknesses[(i+5)%6], thicknesses[i]) / 2.f;
-        drawVertexCircle(window, verts[i], r, lineColor);
+        drawVertexCircle(window, verts[i], r, sideColors[i]);
     }
 }
 

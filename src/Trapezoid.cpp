@@ -28,11 +28,11 @@ void Trapezoid::draw(sf::RenderWindow& window) const {
     auto verts = getGlobalVertices();
     for (int i = 0; i < 4; ++i) {
         int j = (i + 1) % 4;
-        drawThickLine(window, verts[i], verts[j], thicknesses[i], lineColor);
+        drawThickLine(window, verts[i], verts[j], thicknesses[i], sideColors[i]);
     }
     for (int i = 0; i < 4; ++i) {
         float r = std::max(thicknesses[(i+3)%4], thicknesses[i]) / 2.f;
-        drawVertexCircle(window, verts[i], r, lineColor);
+        drawVertexCircle(window, verts[i], r, sideColors[i]);
     }
 }
 

@@ -25,11 +25,11 @@ void Triangle::draw(sf::RenderWindow& window) const {
     auto verts = getGlobalVertices();
     for (int i = 0; i < 3; ++i) {
         int j = (i + 1) % 3;
-        drawThickLine(window, verts[i], verts[j], thicknesses[i], lineColor);
+        drawThickLine(window, verts[i], verts[j], thicknesses[i], sideColors[i]);
     }
     for (int i = 0; i < 3; ++i) {
         float r = std::max(thicknesses[(i+2)%3], thicknesses[i]) / 2.f;
-        drawVertexCircle(window, verts[i], r, lineColor);
+        drawVertexCircle(window, verts[i], r, sideColors[i]);
     }
 }
 

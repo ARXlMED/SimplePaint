@@ -28,11 +28,11 @@ void Rectangle::draw(sf::RenderWindow& window) const {
     int n = verts.size();
     for (int i = 0; i < n; ++i) {
         int j = (i + 1) % n;
-        drawThickLine(window, verts[i], verts[j], thicknesses[i], lineColor);
+        drawThickLine(window, verts[i], verts[j], thicknesses[i], sideColors[i]);
     }
     for (int i = 0; i < n; ++i) {
         float r = std::max(thicknesses[(i + n - 1) % n], thicknesses[i]) / 2.f;
-        drawVertexCircle(window, verts[i], r, lineColor);
+        drawVertexCircle(window, verts[i], r, sideColors[i]);
     }
 }
 

@@ -46,6 +46,7 @@ int main() {
     std::vector<float> currentThicknesses(6, 2.0f);
 
     int selectedThicknessIndex = 0;
+    bool colorMode = false;
 
     sf::Font font;
     std::vector<std::string> fontPaths = {
@@ -147,19 +148,65 @@ int main() {
                         }
                         break;
 
+                    case sf::Keyboard::C:
+                        colorMode = !colorMode;
+                        break;
+
                     case sf::Keyboard::R: {
-                        if (event.key.shift) currentColor.r = std::min(255, currentColor.r + 10);
-                        else currentColor.r = std::max(0, currentColor.r - 10);
+                        if (colorMode) {
+                            if (auto* sel = editor.getSelected()) {
+                                int numSides = sel->getThicknesses().size();
+                                if (selectedThicknessIndex < numSides) {
+                                    sf::Color col = sel->getSideColor(selectedThicknessIndex);
+                                    if (event.key.shift)
+                                        col.r = std::min(255, col.r + 10);
+                                    else
+                                        col.r = std::max(0, col.r - 10);
+                                    sel->setSideColor(selectedThicknessIndex, col);
+                                }
+                            }
+                        } else {
+                            if (event.key.shift) currentColor.r = std::min(255, currentColor.r + 10);
+                            else currentColor.r = std::max(0, currentColor.r - 10);
+                        }
                         break;
                     }
                     case sf::Keyboard::G: {
-                        if (event.key.shift) currentColor.g = std::min(255, currentColor.g + 10);
-                        else currentColor.g = std::max(0, currentColor.g - 10);
+                        if (colorMode) {
+                            if (auto* sel = editor.getSelected()) {
+                                int numSides = sel->getThicknesses().size();
+                                if (selectedThicknessIndex < numSides) {
+                                    sf::Color col = sel->getSideColor(selectedThicknessIndex);
+                                    if (event.key.shift)
+                                        col.g = std::min(255, col.g + 10);
+                                    else
+                                        col.g = std::max(0, col.g - 10);
+                                    sel->setSideColor(selectedThicknessIndex, col);
+                                }
+                            }
+                        } else {
+                            if (event.key.shift) currentColor.g = std::min(255, currentColor.g + 10);
+                            else currentColor.g = std::max(0, currentColor.g - 10);
+                        }
                         break;
                     }
                     case sf::Keyboard::B: {
-                        if (event.key.shift) currentColor.b = std::min(255, currentColor.b + 10);
-                        else currentColor.b = std::max(0, currentColor.b - 10);
+                        if (colorMode) {
+                            if (auto* sel = editor.getSelected()) {
+                                int numSides = sel->getThicknesses().size();
+                                if (selectedThicknessIndex < numSides) {
+                                    sf::Color col = sel->getSideColor(selectedThicknessIndex);
+                                    if (event.key.shift)
+                                        col.b = std::min(255, col.b + 10);
+                                    else
+                                        col.b = std::max(0, col.b - 10);
+                                    sel->setSideColor(selectedThicknessIndex, col);
+                                }
+                            }
+                        } else {
+                            if (event.key.shift) currentColor.b = std::min(255, currentColor.b + 10);
+                            else currentColor.b = std::max(0, currentColor.b - 10);
+                        }
                         break;
                     }
 
@@ -281,12 +328,24 @@ int main() {
             case ShapeType::Pentagon: oss << "radius " << pentRadius; break;
             case ShapeType::Hexagon: oss << "radius " << hexRadius; break;
         }
+        oss << "\nMode: " << (colorMode ? "COLOR" : "THICKNESS");
+        if (colorMode) {
+            oss << "\nCurrent side color: ";
+            if (auto* sel = editor.getSelected()) {
+                if (selectedThicknessIndex < sel->getSideColors().size()) {
+                    sf::Color col = sel->getSideColor(selectedThicknessIndex);
+                    oss << "R:" << (int)col.r << " G:" << (int)col.g << " B:" << (int)col.b;
+                } else oss << "N/A";
+            } else oss << " (no selection)";
+        } else {
+            oss << "\nCurrent thickness: " << currentThicknesses[selectedThicknessIndex];
+        }
         oss << "\n\nControls:\n"
             << "1-6: select shape\n"
             << "Arrow keys: adjust size\n"
-            << "R/G/B: decrease color (Shift+ increase)\n"
-            << "T: increase thickness of current side\n"
-            << "Shift+T: decrease thickness\n"
+            << "R/G/B: " << (colorMode ? "change side color" : "change default color") << " (Shift+ increase)\n"
+            << "C: switch mode\n"
+            << "T: increase thickness, Shift+T: decrease\n"
             << "Y: next side\n"
             << "Space: add shape at center\n"
             << "Delete: remove selected\n"

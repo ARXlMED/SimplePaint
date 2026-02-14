@@ -3,7 +3,9 @@
 #include <algorithm>
 
 Figure::Figure(const sf::Color& color, const std::vector<float>& thicknesses)
-    : position(0, 0), scaleFactor(1.f), lineColor(color), thicknesses(thicknesses) {}
+    : position(0, 0), scaleFactor(1.f), thicknesses(thicknesses) {
+    sideColors.assign(thicknesses.size(), color);
+}
 
 void Figure::move(const sf::Vector2f& offset) {
     position += offset;
@@ -29,15 +31,28 @@ float Figure::getScale() const {
     return scaleFactor;
 }
 
-sf::Color Figure::getColor() const {
-    return lineColor;
-}
-
 const std::vector<float>& Figure::getThicknesses() const {
     return thicknesses;
 }
 
-void Figure::drawThickLine(sf::RenderWindow& window, const sf::Vector2f& A, const sf::Vector2f& B, float thickness, const sf::Color& color) const {
+void Figure::setSideColor(int index, sf::Color color) {
+    if (index >= 0 && index < sideColors.size())
+        sideColors[index] = color;
+}
+
+sf::Color Figure::getSideColor(int index) const {
+    if (index >= 0 && index < sideColors.size())
+        return sideColors[index];
+    return sf::Color::White;
+}
+
+const std::vector<sf::Color>& Figure::getSideColors() const {
+    return sideColors;
+}
+
+void Figure::drawThickLine(sf::RenderWindow& window, const sf::Vector2f& A,
+                           const sf::Vector2f& B, float thickness,
+                           const sf::Color& color) const {
     sf::Vector2f dir = B - A;
     float len = std::sqrt(dir.x * dir.x + dir.y * dir.y);
     if (len == 0) return;
@@ -55,7 +70,8 @@ void Figure::drawThickLine(sf::RenderWindow& window, const sf::Vector2f& A, cons
     window.draw(polygon);
 }
 
-void Figure::drawVertexCircle(sf::RenderWindow& window, const sf::Vector2f& vertex, float radius, const sf::Color& color) const {
+void Figure::drawVertexCircle(sf::RenderWindow& window, const sf::Vector2f& vertex,
+                              float radius, const sf::Color& color) const {
     sf::CircleShape circle(radius);
     circle.setOrigin(radius, radius);
     circle.setPosition(vertex);

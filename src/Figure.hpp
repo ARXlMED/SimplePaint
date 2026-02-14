@@ -18,14 +18,17 @@ public:
     void setPosition(const sf::Vector2f& pos);
     sf::Vector2f getPosition() const;
     float getScale() const;
-    sf::Color getColor() const;
     const std::vector<float>& getThicknesses() const;
+
+    void setSideColor(int index, sf::Color color);
+    sf::Color getSideColor(int index) const;
+    const std::vector<sf::Color>& getSideColors() const;
 
 protected:
     sf::Vector2f position;
     float scaleFactor;
-    sf::Color lineColor;
     std::vector<float> thicknesses;
+    std::vector<sf::Color> sideColors;
 
     void drawThickLine(sf::RenderWindow& window, const sf::Vector2f& A,
                        const sf::Vector2f& B, float thickness,

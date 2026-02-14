@@ -26,11 +26,11 @@ void Pentagon::draw(sf::RenderWindow& window) const {
     auto verts = getGlobalVertices();
     for (int i = 0; i < 5; ++i) {
         int j = (i + 1) % 5;
-        drawThickLine(window, verts[i], verts[j], thicknesses[i], lineColor);
+        drawThickLine(window, verts[i], verts[j], thicknesses[i], sideColors[i]);
     }
     for (int i = 0; i < 5; ++i) {
         float r = std::max(thicknesses[(i+4)%5], thicknesses[i]) / 2.f;
-        drawVertexCircle(window, verts[i], r, lineColor);
+        drawVertexCircle(window, verts[i], r, sideColors[i]);
     }
 }
 
