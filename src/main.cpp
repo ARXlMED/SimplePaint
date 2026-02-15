@@ -43,7 +43,7 @@ int main() {
     float hexRadius = 80;
 
     sf::Color currentColor = sf::Color::White;
-    std::vector<float> currentThicknesses(6, 2.0f);
+    std::vector<float> currentThicknesses(6, 5.0f);
 
     int selectedThicknessIndex = 0;
     bool colorMode = false;

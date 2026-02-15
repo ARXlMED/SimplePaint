@@ -1,4 +1,5 @@
 #include "Trapezoid.hpp"
+#include <cmath>
 #include <algorithm>
 
 Trapezoid::Trapezoid(float topBase, float bottomBase, float height,
@@ -26,13 +27,58 @@ std::vector<sf::Vector2f> Trapezoid::getGlobalVertices() const {
 
 void Trapezoid::draw(sf::RenderWindow& window) const {
     auto verts = getGlobalVertices();
-    for (int i = 0; i < 4; ++i) {
-        int j = (i + 1) % 4;
-        drawThickLine(window, verts[i], verts[j], thicknesses[i], sideColors[i]);
+    int n = verts.size();
+
+    for (int i = 0; i < n; ++i) {
+        int j = (i + 1) % n;
+        sf::Vector2f dir = verts[j] - verts[i];
+        float len = std::sqrt(dir.x * dir.x + dir.y * dir.y);
+        if (len < 1e-6) continue;
+        dir /= len;
+        sf::Vector2f norm(-dir.y, dir.x);
+        float thick = thicknesses[i];
+        sf::Vector2f offset = norm * (thick / 2.f);
+
+        sf::Vector2f A_in = verts[i] - offset;
+        sf::Vector2f B_in = verts[j] - offset;
+
+        sf::ConvexShape quad;
+        quad.setPointCount(4);
+        quad.setPoint(0, verts[i]);
+        quad.setPoint(1, verts[j]);
+        quad.setPoint(2, B_in);
+        quad.setPoint(3, A_in);
+        quad.setFillColor(sideColors[i]);
+        window.draw(quad);
     }
-    for (int i = 0; i < 4; ++i) {
-        float r = std::max(thicknesses[(i+3)%4], thicknesses[i]) / 2.f;
-        drawVertexCircle(window, verts[i], r, sideColors[i]);
+
+    for (int i = 0; i < n; ++i) {
+        int prev = (i + n - 1) % n;
+        sf::Vector2f V = verts[i];
+
+        sf::Vector2f dir_prev = verts[i] - verts[prev];
+        float len_prev = std::sqrt(dir_prev.x * dir_prev.x + dir_prev.y * dir_prev.y);
+        if (len_prev < 1e-6) continue;
+        dir_prev /= len_prev;
+        sf::Vector2f norm_prev(-dir_prev.y, dir_prev.x);
+        float thick_prev = thicknesses[prev];
+        sf::Vector2f P_in = V - norm_prev * (thick_prev / 2.f);
+
+        sf::Vector2f dir_next = verts[(i + 1) % n] - V;
+        float len_next = std::sqrt(dir_next.x * dir_next.x + dir_next.y * dir_next.y);
+        if (len_next < 1e-6) continue;
+        dir_next /= len_next;
+        sf::Vector2f norm_next(-dir_next.y, dir_next.x);
+        float thick_next = thicknesses[i];
+        sf::Vector2f N_in = V - norm_next * (thick_next / 2.f);
+
+        sf::ConvexShape tri;
+        tri.setPointCount(3);
+        tri.setPoint(0, V);
+        tri.setPoint(1, P_in);
+        tri.setPoint(2, N_in);
+        tri.setFillColor(sideColors[i]);
+        window.draw(tri);
     }
 }
 
