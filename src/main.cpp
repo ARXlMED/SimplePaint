@@ -145,7 +145,7 @@ void drawEditWindow(sf::RenderWindow& window, Figure* fig, const sf::Font& font,
 
     float fieldX1 = panelX + marginLeft;
     float fieldX2 = fieldX1 + fieldWidth + 20;
-    float fieldY = currentY;
+    float fieldY = currentY + 10;
 
     // Global X
     sf::Text labelX;
@@ -204,12 +204,12 @@ void drawEditWindow(sf::RenderWindow& window, Figure* fig, const sf::Font& font,
     scaleText.setFont(font);
     scaleText.setCharacterSize(24);
     scaleText.setFillColor(sf::Color::White);
-    scaleText.setPosition(panelX + marginLeft, currentY);
+    scaleText.setPosition(panelX + marginLeft, currentY + 10);
     scaleText.setString("Scale: " + std::to_string(fig->getScale()));
     window.draw(scaleText);
     currentY += lineSpacing;
 
-    fieldY = currentY;
+    fieldY = currentY + 20;
 
     // Pivot X
     sf::Text labelPivotX;
@@ -261,7 +261,7 @@ void drawEditWindow(sf::RenderWindow& window, Figure* fig, const sf::Font& font,
     valPY.setString(std::to_string((int)fig->getLocalPivot().y));
     window.draw(valPY);
 
-    currentY += fieldHeight + lineSpacing - 40;
+    currentY += fieldHeight + lineSpacing - 20;
 
     // Filled info
     sf::Text fillText;
