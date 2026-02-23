@@ -26,56 +26,65 @@ void Hexagon::draw(sf::RenderWindow& window) const {
         window.draw(fillShape);
     }
 
+    std::vector<sf::Vector2f> outPoint(n), inPoint(n);
     for (int i = 0; i < n; ++i) {
-        int j = (i + 1) % n;
-        sf::Vector2f dir = verts[j] - verts[i];
-        float len = std::sqrt(dir.x * dir.x + dir.y * dir.y);
-        if (len < 1e-6) continue;
-        dir /= len;
-        sf::Vector2f norm(-dir.y, dir.x);
-        float thick = thicknesses[i];
-        sf::Vector2f offset = norm * (thick / 2.f);
+        int prev = (i + n - 1) % n;
+        int next = (i + 1) % n;
 
-        sf::Vector2f A_in = verts[i] - offset;
-        sf::Vector2f B_in = verts[j] - offset;
+        sf::Vector2f V = verts[i];
+        sf::Vector2f P = verts[prev];
+        sf::Vector2f N = verts[next];
 
-        sf::ConvexShape quad;
-        quad.setPointCount(4);
-        quad.setPoint(0, verts[i]);
-        quad.setPoint(1, verts[j]);
-        quad.setPoint(2, B_in);
-        quad.setPoint(3, A_in);
-        quad.setFillColor(sideColors[i]);
-        window.draw(quad);
+        float t_prev = thicknesses[prev];
+        float t_next = thicknesses[i];
+
+        sf::Vector2f dir_prev = V - P;
+        sf::Vector2f dir_next = N - V;
+        float len_prev = std::sqrt(dir_prev.x * dir_prev.x + dir_prev.y * dir_prev.y);
+        float len_next = std::sqrt(dir_next.x * dir_next.x + dir_next.y * dir_next.y);
+        if (len_prev < 1e-6 || len_next < 1e-6) {
+            outPoint[i] = V;
+            inPoint[i] = V;
+            continue;
+        }
+        dir_prev /= len_prev;
+        dir_next /= len_next;
+
+        sf::Vector2f norm_out_prev(-dir_prev.y, dir_prev.x);
+        sf::Vector2f norm_out_next(-dir_next.y, dir_next.x);
+        sf::Vector2f norm_in_prev = -norm_out_prev;
+        sf::Vector2f norm_in_next = -norm_out_next;
+
+        sf::Vector2f A_out = V + norm_out_prev * (t_prev / 2.f);
+        sf::Vector2f B_out = V + norm_out_next * (t_next / 2.f);
+        sf::Vector2f A_in  = V + norm_in_prev * (t_prev / 2.f);
+        sf::Vector2f B_in  = V + norm_in_next * (t_next / 2.f);
+
+        float det = dir_prev.x * dir_next.y - dir_prev.y * dir_next.x;
+        if (std::abs(det) < 1e-6) {
+            outPoint[i] = (A_out + B_out) / 2.f;
+            inPoint[i]  = (A_in + B_in) / 2.f;
+        } else {
+            sf::Vector2f delta_out = B_out - A_out;
+            float u_out = (delta_out.x * dir_next.y - delta_out.y * dir_next.x) / det;
+            outPoint[i] = A_out + u_out * dir_prev;
+
+            sf::Vector2f delta_in = B_in - A_in;
+            float u_in = (delta_in.x * dir_next.y - delta_in.y * dir_next.x) / det;
+            inPoint[i] = A_in + u_in * dir_prev;
+        }
     }
 
     for (int i = 0; i < n; ++i) {
-        int prev = (i + n - 1) % n;
-        sf::Vector2f V = verts[i];
-
-        sf::Vector2f dir_prev = verts[i] - verts[prev];
-        float len_prev = std::sqrt(dir_prev.x * dir_prev.x + dir_prev.y * dir_prev.y);
-        if (len_prev < 1e-6) continue;
-        dir_prev /= len_prev;
-        sf::Vector2f norm_prev(-dir_prev.y, dir_prev.x);
-        float thick_prev = thicknesses[prev];
-        sf::Vector2f P_in = V - norm_prev * (thick_prev / 2.f);
-
-        sf::Vector2f dir_next = verts[(i + 1) % n] - V;
-        float len_next = std::sqrt(dir_next.x * dir_next.x + dir_next.y * dir_next.y);
-        if (len_next < 1e-6) continue;
-        dir_next /= len_next;
-        sf::Vector2f norm_next(-dir_next.y, dir_next.x);
-        float thick_next = thicknesses[i];
-        sf::Vector2f N_in = V - norm_next * (thick_next / 2.f);
-
-        sf::ConvexShape tri;
-        tri.setPointCount(3);
-        tri.setPoint(0, V);
-        tri.setPoint(1, P_in);
-        tri.setPoint(2, N_in);
-        tri.setFillColor(sideColors[i]);
-        window.draw(tri);
+        int j = (i + 1) % n;
+        sf::ConvexShape quad;
+        quad.setPointCount(4);
+        quad.setPoint(0, outPoint[i]);
+        quad.setPoint(1, outPoint[j]);
+        quad.setPoint(2, inPoint[j]);
+        quad.setPoint(3, inPoint[i]);
+        quad.setFillColor(sideColors[i]);
+        window.draw(quad);
     }
 }
 
@@ -95,6 +104,7 @@ sf::FloatRect Hexagon::getBoundingBox() const {
     return sf::FloatRect(minX - maxThick/2, minY - maxThick/2,
                          (maxX - minX) + maxThick, (maxY - minY) + maxThick);
 }
+
 
 bool Hexagon::contains(const sf::Vector2f& point) const {
     return getBoundingBox().contains(point);

@@ -439,7 +439,7 @@ int main() {
         float cx = winSize.x / 2.f;
         float cy = winSize.y / 2.f;
 
-        auto rect = std::make_unique<Rectangle>(150, 100, sf::Color::Red, std::vector<float>{2,2,2,2});
+        /*auto rect = std::make_unique<Rectangle>(150, 100, sf::Color::Red, std::vector<float>{2,2,2,2});
         rect->setPosition({cx - 250, cy - 150});
         rect->setFillColor(sf::Color::Yellow);
         rect->setFilled(true);
@@ -467,7 +467,7 @@ int main() {
         hex->setPosition({cx + 250, cy + 200});
         hex->setFillColor(sf::Color::Red);
         hex->setFilled(true);
-        editor.addFigure(std::move(hex));
+        editor.addFigure(std::move(hex));*/
     };
     createInitialShapes();
 
@@ -830,7 +830,7 @@ int main() {
                             newFig = std::make_unique<Trapezoid>(trapTop, trapBottom, trapHeight, currentOutlineColor, thicknesses);
                             break;
                         case ShapeType::Circle:
-                            thicknesses = {currentThicknesses[0]};
+                            thicknesses = {(float)currentThicknesses[0]};
                             newFig = std::make_unique<Circle>(circleRadius, currentOutlineColor, thicknesses);
                             break;
                         case ShapeType::Pentagon:
