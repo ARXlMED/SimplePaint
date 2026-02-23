@@ -14,6 +14,10 @@ public:
     virtual void move(const sf::Vector2f& offset);
     virtual void scale(float factor);
     virtual void setScale(float factor);
+    virtual void setThickness(int index, float thickness) {
+    if (index >= 0 && index < thicknesses.size())
+        thicknesses[index] = thickness;
+}
 
     void setPosition(const sf::Vector2f& pos);
     sf::Vector2f getPosition() const;
@@ -55,4 +59,6 @@ protected:
                        const sf::Color& color) const;
     void drawVertexCircle(sf::RenderWindow& window, const sf::Vector2f& vertex,
                           float radius, const sf::Color& color) const;
+
+                          
 };

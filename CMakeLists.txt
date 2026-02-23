@@ -21,6 +21,7 @@ set(SOURCES
     src/Pentagon.cpp
     src/Hexagon.cpp
     src/Editor.cpp
+    src/TextBox.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})
