@@ -13,7 +13,7 @@
 #include "Circle.hpp"
 #include "Pentagon.hpp"
 #include "Hexagon.hpp"
-
+ 
 enum class ShapeType {
     Rectangle,
     Triangle,
@@ -21,6 +21,14 @@ enum class ShapeType {
     Circle,
     Pentagon,
     Hexagon
+};
+
+enum class Mode {
+    THICKNESS,
+    COLOR,
+    FILL,
+    PIVOT,
+    VERTEX
 };
 
 std::string colorToString(const sf::Color& c) {
@@ -42,11 +50,12 @@ int main() {
     float pentRadius = 80;
     float hexRadius = 80;
 
-    sf::Color currentColor = sf::Color::White;
+    sf::Color currentOutlineColor = sf::Color::White;   // цвет обводки новых фигур
     std::vector<float> currentThicknesses(6, 5.0f);
+    int selectedIndex = 0; // для стороны или вершины (в зависимости от режима)
 
-    int selectedThicknessIndex = 0;
-    bool colorMode = false;
+    Mode currentMode = Mode::THICKNESS;
+    sf::Color currentFillColor = sf::Color::White;   // цвет заливки для новых фигур
 
     sf::Font font;
     std::vector<std::string> fontPaths = {
@@ -114,98 +123,166 @@ int main() {
                     case sf::Keyboard::Num6: currentShape = ShapeType::Hexagon; break;
 
                     case sf::Keyboard::Up:
-                        switch (currentShape) {
-                            case ShapeType::Rectangle: rectHeight += 5; break;
-                            case ShapeType::Triangle: triSide += 5; break;
-                            case ShapeType::Trapezoid: trapHeight += 5; break;
-                            case ShapeType::Circle: circleRadius += 2; break;
-                            case ShapeType::Pentagon: pentRadius += 2; break;
-                            case ShapeType::Hexagon: hexRadius += 2; break;
-                        }
-                        break;
                     case sf::Keyboard::Down:
-                        switch (currentShape) {
-                            case ShapeType::Rectangle: rectHeight = std::max(10.0f, rectHeight - 5); break;
-                            case ShapeType::Triangle: triSide = std::max(10.0f, triSide - 5); break;
-                            case ShapeType::Trapezoid: trapHeight = std::max(10.0f, trapHeight - 5); break;
-                            case ShapeType::Circle: circleRadius = std::max(5.0f, circleRadius - 2); break;
-                            case ShapeType::Pentagon: pentRadius = std::max(5.0f, pentRadius - 2); break;
-                            case ShapeType::Hexagon: hexRadius = std::max(5.0f, hexRadius - 2); break;
-                        }
-                        break;
                     case sf::Keyboard::Left:
-                        switch (currentShape) {
-                            case ShapeType::Rectangle: rectWidth = std::max(10.0f, rectWidth - 5); break;
-                            case ShapeType::Trapezoid: trapTop = std::max(10.0f, trapTop - 5); break;
-                            default: break;
-                        }
-                        break;
-                    case sf::Keyboard::Right:
-                        switch (currentShape) {
-                            case ShapeType::Rectangle: rectWidth += 5; break;
-                            case ShapeType::Trapezoid: trapTop += 5; break;
-                            default: break;
-                        }
-                        break;
+                    case sf::Keyboard::Right: {
+                        if (!editor.getSelected()) break; // ничего не выбрано
+                        Figure* sel = editor.getSelected();
+                        int dx = 0, dy = 0;
+                        if (event.key.code == sf::Keyboard::Up) dy = -1;
+                        else if (event.key.code == sf::Keyboard::Down) dy = 1;
+                        else if (event.key.code == sf::Keyboard::Left) dx = -1;
+                        else if (event.key.code == sf::Keyboard::Right) dx = 1;
 
-                    case sf::Keyboard::C:
-                        colorMode = !colorMode;
+                        if (currentMode == Mode::PIVOT) {
+                            // Перемещаем точку привязки в локальных координатах (целочисленно)
+                            sf::Vector2f newPivot = sel->getLocalPivot() + sf::Vector2f(dx, dy);
+                            sel->setLocalPivot(newPivot);
+                        }
+                        else if (currentMode == Mode::VERTEX) {
+                            size_t vertexCount = sel->getVertexCount();
+                            if (vertexCount > 0 && selectedIndex < vertexCount) {
+                                sf::Vector2f newPos = sel->getLocalVertex(selectedIndex) + sf::Vector2f(dx, dy);
+                                sel->setLocalVertex(selectedIndex, newPos);
+                            }
+                        }
+                        else {
+                            // В остальных режимах стрелки меняют размер фигуры (как раньше)
+                            switch (currentShape) {
+                                case ShapeType::Rectangle:
+                                    if (event.key.code == sf::Keyboard::Up) rectHeight += 5;
+                                    else if (event.key.code == sf::Keyboard::Down) rectHeight = std::max(10.0f, rectHeight - 5);
+                                    else if (event.key.code == sf::Keyboard::Left) rectWidth = std::max(10.0f, rectWidth - 5);
+                                    else if (event.key.code == sf::Keyboard::Right) rectWidth += 5;
+                                    break;
+                                case ShapeType::Triangle:
+                                    if (event.key.code == sf::Keyboard::Up) triSide += 5;
+                                    else if (event.key.code == sf::Keyboard::Down) triSide = std::max(10.0f, triSide - 5);
+                                    break;
+                                case ShapeType::Trapezoid:
+                                    if (event.key.code == sf::Keyboard::Up) trapHeight += 5;
+                                    else if (event.key.code == sf::Keyboard::Down) trapHeight = std::max(10.0f, trapHeight - 5);
+                                    else if (event.key.code == sf::Keyboard::Left) trapTop = std::max(10.0f, trapTop - 5);
+                                    else if (event.key.code == sf::Keyboard::Right) trapTop += 5;
+                                    break;
+                                case ShapeType::Circle:
+                                    if (event.key.code == sf::Keyboard::Up) circleRadius += 2;
+                                    else if (event.key.code == sf::Keyboard::Down) circleRadius = std::max(5.0f, circleRadius - 2);
+                                    break;
+                                case ShapeType::Pentagon:
+                                    if (event.key.code == sf::Keyboard::Up) pentRadius += 2;
+                                    else if (event.key.code == sf::Keyboard::Down) pentRadius = std::max(5.0f, pentRadius - 2);
+                                    break;
+                                case ShapeType::Hexagon:
+                                    if (event.key.code == sf::Keyboard::Up) hexRadius += 2;
+                                    else if (event.key.code == sf::Keyboard::Down) hexRadius = std::max(5.0f, hexRadius - 2);
+                                    break;
+                            }
+                        }
+                        break;
+                    }
+
+                    case sf::Keyboard::F:
+                        // Циклическое переключение режимов
+                        switch (currentMode) {
+                            case Mode::THICKNESS: currentMode = Mode::COLOR; break;
+                            case Mode::COLOR: currentMode = Mode::FILL; break;
+                            case Mode::FILL: currentMode = Mode::PIVOT; break;
+                            case Mode::PIVOT: currentMode = Mode::VERTEX; break;
+                            case Mode::VERTEX: currentMode = Mode::THICKNESS; break;
+                        }
                         break;
 
                     case sf::Keyboard::R: {
-                        if (colorMode) {
+                        if (currentMode == Mode::FILL) {
+                            if (auto* sel = editor.getSelected()) {
+                                sf::Color col = sel->getFillColor();
+                                if (event.key.shift) col.r = std::min(255, col.r + 10);
+                                else col.r = std::max(0, col.r - 10);
+                                sel->setFillColor(col);
+                                sel->setFilled(true);
+                            } else {
+                                if (event.key.shift) currentFillColor.r = std::min(255, currentFillColor.r + 10);
+                                else currentFillColor.r = std::max(0, currentFillColor.r - 10);
+                            }
+                        } else if (currentMode == Mode::COLOR) {
                             if (auto* sel = editor.getSelected()) {
                                 int numSides = sel->getThicknesses().size();
-                                if (selectedThicknessIndex < numSides) {
-                                    sf::Color col = sel->getSideColor(selectedThicknessIndex);
-                                    if (event.key.shift)
-                                        col.r = std::min(255, col.r + 10);
-                                    else
-                                        col.r = std::max(0, col.r - 10);
-                                    sel->setSideColor(selectedThicknessIndex, col);
+                                if (selectedIndex < numSides) {
+                                    sf::Color col = sel->getSideColor(selectedIndex);
+                                    if (event.key.shift) col.r = std::min(255, col.r + 10);
+                                    else col.r = std::max(0, col.r - 10);
+                                    sel->setSideColor(selectedIndex, col);
                                 }
+                            } else {
+                                if (event.key.shift) currentOutlineColor.r = std::min(255, currentOutlineColor.r + 10);
+                                else currentOutlineColor.r = std::max(0, currentOutlineColor.r - 10);
                             }
-                        } else {
-                            if (event.key.shift) currentColor.r = std::min(255, currentColor.r + 10);
-                            else currentColor.r = std::max(0, currentColor.r - 10);
+                        } else if (currentMode == Mode::THICKNESS) {
+                            if (event.key.shift) currentOutlineColor.r = std::min(255, currentOutlineColor.r + 10);
+                            else currentOutlineColor.r = std::max(0, currentOutlineColor.r - 10);
                         }
                         break;
                     }
                     case sf::Keyboard::G: {
-                        if (colorMode) {
+                        if (currentMode == Mode::FILL) {
+                            if (auto* sel = editor.getSelected()) {
+                                sf::Color col = sel->getFillColor();
+                                if (event.key.shift) col.g = std::min(255, col.g + 10);
+                                else col.g = std::max(0, col.g - 10);
+                                sel->setFillColor(col);
+                                sel->setFilled(true);
+                            } else {
+                                if (event.key.shift) currentFillColor.g = std::min(255, currentFillColor.g + 10);
+                                else currentFillColor.g = std::max(0, currentFillColor.g - 10);
+                            }
+                        } else if (currentMode == Mode::COLOR) {
                             if (auto* sel = editor.getSelected()) {
                                 int numSides = sel->getThicknesses().size();
-                                if (selectedThicknessIndex < numSides) {
-                                    sf::Color col = sel->getSideColor(selectedThicknessIndex);
-                                    if (event.key.shift)
-                                        col.g = std::min(255, col.g + 10);
-                                    else
-                                        col.g = std::max(0, col.g - 10);
-                                    sel->setSideColor(selectedThicknessIndex, col);
+                                if (selectedIndex < numSides) {
+                                    sf::Color col = sel->getSideColor(selectedIndex);
+                                    if (event.key.shift) col.g = std::min(255, col.g + 10);
+                                    else col.g = std::max(0, col.g - 10);
+                                    sel->setSideColor(selectedIndex, col);
                                 }
+                            } else {
+                                if (event.key.shift) currentOutlineColor.g = std::min(255, currentOutlineColor.g + 10);
+                                else currentOutlineColor.g = std::max(0, currentOutlineColor.g - 10);
                             }
-                        } else {
-                            if (event.key.shift) currentColor.g = std::min(255, currentColor.g + 10);
-                            else currentColor.g = std::max(0, currentColor.g - 10);
+                        } else if (currentMode == Mode::THICKNESS) {
+                            if (event.key.shift) currentOutlineColor.g = std::min(255, currentOutlineColor.g + 10);
+                            else currentOutlineColor.g = std::max(0, currentOutlineColor.g - 10);
                         }
                         break;
                     }
                     case sf::Keyboard::B: {
-                        if (colorMode) {
+                        if (currentMode == Mode::FILL) {
+                            if (auto* sel = editor.getSelected()) {
+                                sf::Color col = sel->getFillColor();
+                                if (event.key.shift) col.b = std::min(255, col.b + 10);
+                                else col.b = std::max(0, col.b - 10);
+                                sel->setFillColor(col);
+                                sel->setFilled(true);
+                            } else {
+                                if (event.key.shift) currentFillColor.b = std::min(255, currentFillColor.b + 10);
+                                else currentFillColor.b = std::max(0, currentFillColor.b - 10);
+                            }
+                        } else if (currentMode == Mode::COLOR) {
                             if (auto* sel = editor.getSelected()) {
                                 int numSides = sel->getThicknesses().size();
-                                if (selectedThicknessIndex < numSides) {
-                                    sf::Color col = sel->getSideColor(selectedThicknessIndex);
-                                    if (event.key.shift)
-                                        col.b = std::min(255, col.b + 10);
-                                    else
-                                        col.b = std::max(0, col.b - 10);
-                                    sel->setSideColor(selectedThicknessIndex, col);
+                                if (selectedIndex < numSides) {
+                                    sf::Color col = sel->getSideColor(selectedIndex);
+                                    if (event.key.shift) col.b = std::min(255, col.b + 10);
+                                    else col.b = std::max(0, col.b - 10);
+                                    sel->setSideColor(selectedIndex, col);
                                 }
+                            } else {
+                                if (event.key.shift) currentOutlineColor.b = std::min(255, currentOutlineColor.b + 10);
+                                else currentOutlineColor.b = std::max(0, currentOutlineColor.b - 10);
                             }
-                        } else {
-                            if (event.key.shift) currentColor.b = std::min(255, currentColor.b + 10);
-                            else currentColor.b = std::max(0, currentColor.b - 10);
+                        } else if (currentMode == Mode::THICKNESS) {
+                            if (event.key.shift) currentOutlineColor.b = std::min(255, currentOutlineColor.b + 10);
+                            else currentOutlineColor.b = std::max(0, currentOutlineColor.b - 10);
                         }
                         break;
                     }
@@ -222,24 +299,25 @@ int main() {
                         }
                         if (numSides == 0) break;
                         if (event.key.shift) {
-                            currentThicknesses[selectedThicknessIndex] = std::max(0.5f, currentThicknesses[selectedThicknessIndex] - 0.5f);
+                            currentThicknesses[selectedIndex] = std::max(0.5f, currentThicknesses[selectedIndex] - 0.5f);
                         } else {
-                            currentThicknesses[selectedThicknessIndex] += 0.5f;
+                            currentThicknesses[selectedIndex] += 0.5f;
                         }
                         break;
                     }
                     case sf::Keyboard::Y: {
-                        int numSides = 0;
+                        // Переключение индекса (стороны или вершины)
+                        int maxIndex = 0;
                         switch (currentShape) {
-                            case ShapeType::Rectangle: numSides = 4; break;
-                            case ShapeType::Triangle: numSides = 3; break;
-                            case ShapeType::Trapezoid: numSides = 4; break;
-                            case ShapeType::Circle: numSides = 1; break;
-                            case ShapeType::Pentagon: numSides = 5; break;
-                            case ShapeType::Hexagon: numSides = 6; break;
+                            case ShapeType::Rectangle: maxIndex = 4; break;
+                            case ShapeType::Triangle: maxIndex = 3; break;
+                            case ShapeType::Trapezoid: maxIndex = 4; break;
+                            case ShapeType::Circle: maxIndex = 1; break;
+                            case ShapeType::Pentagon: maxIndex = 5; break;
+                            case ShapeType::Hexagon: maxIndex = 6; break;
                         }
-                        if (numSides > 0) {
-                            selectedThicknessIndex = (selectedThicknessIndex + 1) % numSides;
+                        if (maxIndex > 0) {
+                            selectedIndex = (selectedIndex + 1) % maxIndex;
                         }
                         break;
                     }
@@ -253,31 +331,33 @@ int main() {
                         switch (currentShape) {
                             case ShapeType::Rectangle:
                                 thicknesses.assign(currentThicknesses.begin(), currentThicknesses.begin()+4);
-                                newFig = std::make_unique<Rectangle>(rectWidth, rectHeight, currentColor, thicknesses);
+                                newFig = std::make_unique<Rectangle>(rectWidth, rectHeight, currentOutlineColor, thicknesses);
                                 break;
                             case ShapeType::Triangle:
                                 thicknesses.assign(currentThicknesses.begin(), currentThicknesses.begin()+3);
-                                newFig = std::make_unique<Triangle>(triSide, currentColor, thicknesses);
+                                newFig = std::make_unique<Triangle>(triSide, currentOutlineColor, thicknesses);
                                 break;
                             case ShapeType::Trapezoid:
                                 thicknesses.assign(currentThicknesses.begin(), currentThicknesses.begin()+4);
-                                newFig = std::make_unique<Trapezoid>(trapTop, trapBottom, trapHeight, currentColor, thicknesses);
+                                newFig = std::make_unique<Trapezoid>(trapTop, trapBottom, trapHeight, currentOutlineColor, thicknesses);
                                 break;
                             case ShapeType::Circle:
                                 thicknesses = {currentThicknesses[0]};
-                                newFig = std::make_unique<Circle>(circleRadius, currentColor, thicknesses);
+                                newFig = std::make_unique<Circle>(circleRadius, currentOutlineColor, thicknesses);
                                 break;
                             case ShapeType::Pentagon:
                                 thicknesses.assign(currentThicknesses.begin(), currentThicknesses.begin()+5);
-                                newFig = std::make_unique<Pentagon>(pentRadius, currentColor, thicknesses);
+                                newFig = std::make_unique<Pentagon>(pentRadius, currentOutlineColor, thicknesses);
                                 break;
                             case ShapeType::Hexagon:
                                 thicknesses.assign(currentThicknesses.begin(), currentThicknesses.begin()+6);
-                                newFig = std::make_unique<Hexagon>(hexRadius, currentColor, thicknesses);
+                                newFig = std::make_unique<Hexagon>(hexRadius, currentOutlineColor, thicknesses);
                                 break;
                         }
                         if (newFig) {
                             newFig->setPosition(center);
+                            newFig->setFillColor(currentFillColor);
+                            newFig->setFilled(currentMode == Mode::FILL); // если режим fill, то заливаем
                             editor.addFigure(std::move(newFig));
                         }
                         break;
@@ -302,7 +382,7 @@ int main() {
             case ShapeType::Pentagon: oss << "Pentagon"; break;
             case ShapeType::Hexagon: oss << "Hexagon"; break;
         }
-        oss << "\nColor: " << colorToString(currentColor);
+        oss << "\nDefault outline color: " << colorToString(currentOutlineColor);
         oss << "\nThicknesses: ";
         int numSides = 0;
         switch (currentShape) {
@@ -314,7 +394,7 @@ int main() {
             case ShapeType::Hexagon: numSides = 6; break;
         }
         for (int i = 0; i < numSides; ++i) {
-            if (i == selectedThicknessIndex)
+            if (i == selectedIndex)
                 oss << " [" << currentThicknesses[i] << "]";
             else
                 oss << " " << currentThicknesses[i];
@@ -328,26 +408,64 @@ int main() {
             case ShapeType::Pentagon: oss << "radius " << pentRadius; break;
             case ShapeType::Hexagon: oss << "radius " << hexRadius; break;
         }
-        oss << "\nMode: " << (colorMode ? "COLOR" : "THICKNESS");
-        if (colorMode) {
+
+        oss << "\nMode: ";
+        switch (currentMode) {
+            case Mode::THICKNESS: oss << "THICKNESS"; break;
+            case Mode::COLOR: oss << "COLOR (side)"; break;
+            case Mode::FILL: oss << "FILL"; break;
+            case Mode::PIVOT: oss << "PIVOT"; break;
+            case Mode::VERTEX: oss << "VERTEX"; break;
+        }
+
+        if (currentMode == Mode::FILL) {
+            oss << "\nFill color: ";
+            if (auto* sel = editor.getSelected()) {
+                oss << colorToString(sel->getFillColor());
+            } else {
+                oss << colorToString(currentFillColor);
+            }
+        } else if (currentMode == Mode::COLOR) {
             oss << "\nCurrent side color: ";
             if (auto* sel = editor.getSelected()) {
-                if (selectedThicknessIndex < sel->getSideColors().size()) {
-                    sf::Color col = sel->getSideColor(selectedThicknessIndex);
-                    oss << "R:" << (int)col.r << " G:" << (int)col.g << " B:" << (int)col.b;
+                if (selectedIndex < sel->getSideColors().size()) {
+                    sf::Color col = sel->getSideColor(selectedIndex);
+                    oss << colorToString(col);
                 } else oss << "N/A";
             } else oss << " (no selection)";
-        } else {
-            oss << "\nCurrent thickness: " << currentThicknesses[selectedThicknessIndex];
+        } else if (currentMode == Mode::THICKNESS) {
+            oss << "\nCurrent thickness: " << currentThicknesses[selectedIndex];
+        } else if (currentMode == Mode::PIVOT) {
+            oss << "\nPivot (local): ";
+            if (auto* sel = editor.getSelected()) {
+                sf::Vector2f p = sel->getLocalPivot();
+                oss << "(" << (int)p.x << ", " << (int)p.y << ")";
+            } else {
+                oss << " (no selection)";
+            }
+        } else if (currentMode == Mode::VERTEX) {
+    oss << "\nVertex index: " << selectedIndex;
+    if (auto* sel = editor.getSelected()) {
+        if (selectedIndex < sel->getVertexCount()) {
+            sf::Vector2f v = sel->getLocalVertex(selectedIndex);
+            sf::Vector2f p = sel->getLocalPivot();
+            sf::Vector2f rel = v - p;
+            oss << "  relative to pivot: (" << (int)rel.x << ", " << (int)rel.y << ")";
         }
+    } else {
+        oss << " (no selection)";
+    }
+}
+        
+
         oss << "\n\nControls:\n"
             << "1-6: select shape\n"
-            << "Arrow keys: adjust size\n"
-            << "R/G/B: " << (colorMode ? "change side color" : "change default color") << " (Shift+ increase)\n"
-            << "C: switch mode\n"
+            << "Arrow keys: adjust size / move pivot / move vertex\n"
+            << "F: switch mode (THICKNESS/COLOR/FILL/PIVOT/VERTEX)\n"
+            << "R/G/B: change value (Shift+ increase)\n"
             << "T: increase thickness, Shift+T: decrease\n"
-            << "Y: next side\n"
-            << "Space: add shape at center\n"
+            << "Y: next side / vertex\n"
+            << "Space: add shape at center (uses current fill mode)\n"
             << "Delete: remove selected\n"
             << "Mouse wheel: scale selected\n"
             << "X (top right): exit";

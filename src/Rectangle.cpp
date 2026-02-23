@@ -4,90 +4,99 @@
 
 Rectangle::Rectangle(float width, float height, const sf::Color& color,
                      const std::vector<float>& thicknesses)
-    : Figure(color, thicknesses), baseWidth(width), baseHeight(height) {}
-
-std::vector<sf::Vector2f> Rectangle::getLocalVertices() const {
-    float w = baseWidth * scaleFactor;
-    float h = baseHeight * scaleFactor;
-    return {
-        {-w/2, -h/2},
-        { w/2, -h/2},
-        { w/2,  h/2},
-        {-w/2,  h/2}
+    : Figure(color, thicknesses) {
+    baseVertices = {
+        {-width/2, -height/2},
+        { width/2, -height/2},
+        { width/2,  height/2},
+        {-width/2,  height/2}
     };
 }
 
-std::vector<sf::Vector2f> Rectangle::getGlobalVertices() const {
-    auto local = getLocalVertices();
-    std::vector<sf::Vector2f> global;
-    for (auto& v : local) global.push_back(position + v);
-    return global;
-}
-
 void Rectangle::draw(sf::RenderWindow& window) const {
-    auto verts = getGlobalVertices();
+    // Глобальные вершины с учётом масштаба
+    std::vector<sf::Vector2f> verts;
+    for (const auto& v : baseVertices)
+        verts.push_back(position + v * scaleFactor);
     int n = verts.size();
 
-    // Векторы для внутренних точек на каждой стороне
-    std::vector<sf::Vector2f> inner_start(n), inner_end(n);
+    if (filled) {
+        sf::ConvexShape fillShape;
+        fillShape.setPointCount(n);
+        for (int i = 0; i < n; ++i)
+            fillShape.setPoint(i, verts[i]);
+        fillShape.setFillColor(fillColor);
+        window.draw(fillShape);
+    }
 
-    // Вычисляем внутренние точки для каждой стороны
     for (int i = 0; i < n; ++i) {
         int j = (i + 1) % n;
         sf::Vector2f dir = verts[j] - verts[i];
         float len = std::sqrt(dir.x * dir.x + dir.y * dir.y);
         if (len < 1e-6) continue;
         dir /= len;
-        // Внутренняя нормаль (для обхода по часовой стрелке в SFML)
-        sf::Vector2f norm_in(-dir.y, dir.x);
+        sf::Vector2f norm(-dir.y, dir.x);
         float thick = thicknesses[i];
-        sf::Vector2f offset = norm_in * (thick / 2.f);
+        sf::Vector2f offset = norm * (thick / 2.f);
 
-        inner_start[i] = verts[i] + offset; // точка у начала стороны
-        inner_end[i] = verts[j] + offset;   // точка у конца стороны
-    }
+        sf::Vector2f A_in = verts[i] - offset;
+        sf::Vector2f B_in = verts[j] - offset;
 
-    // Рисуем стороны
-    for (int i = 0; i < n; ++i) {
-        int j = (i + 1) % n;
         sf::ConvexShape quad;
         quad.setPointCount(4);
-        quad.setPoint(0, verts[i]);       // внешняя начало
-        quad.setPoint(1, verts[j]);       // внешняя конец
-        quad.setPoint(2, inner_end[i]);   // внутренняя конец
-        quad.setPoint(3, inner_start[i]); // внутренняя начало
+        quad.setPoint(0, verts[i]);
+        quad.setPoint(1, verts[j]);
+        quad.setPoint(2, B_in);
+        quad.setPoint(3, A_in);
         quad.setFillColor(sideColors[i]);
         window.draw(quad);
     }
 
-    // Заполняем углы
     for (int i = 0; i < n; ++i) {
         int prev = (i + n - 1) % n;
+        sf::Vector2f V = verts[i];
+
+        sf::Vector2f dir_prev = verts[i] - verts[prev];
+        float len_prev = std::sqrt(dir_prev.x * dir_prev.x + dir_prev.y * dir_prev.y);
+        if (len_prev < 1e-6) continue;
+        dir_prev /= len_prev;
+        sf::Vector2f norm_prev(-dir_prev.y, dir_prev.x);
+        float thick_prev = thicknesses[prev];
+        sf::Vector2f P_in = V - norm_prev * (thick_prev / 2.f);
+
+        sf::Vector2f dir_next = verts[(i + 1) % n] - V;
+        float len_next = std::sqrt(dir_next.x * dir_next.x + dir_next.y * dir_next.y);
+        if (len_next < 1e-6) continue;
+        dir_next /= len_next;
+        sf::Vector2f norm_next(-dir_next.y, dir_next.x);
+        float thick_next = thicknesses[i];
+        sf::Vector2f N_in = V - norm_next * (thick_next / 2.f);
+
         sf::ConvexShape tri;
         tri.setPointCount(3);
-        tri.setPoint(0, verts[i]);
-        tri.setPoint(1, inner_end[prev]);  // внутренняя точка предыдущей стороны
-        tri.setPoint(2, inner_start[i]);   // внутренняя точка текущей стороны
+        tri.setPoint(0, V);
+        tri.setPoint(1, P_in);
+        tri.setPoint(2, N_in);
         tri.setFillColor(sideColors[i]);
         window.draw(tri);
     }
 }
 
 sf::FloatRect Rectangle::getBoundingBox() const {
-    auto verts = getLocalVertices();
-    float minX = verts[0].x, maxX = verts[0].x;
-    float minY = verts[0].y, maxY = verts[0].y;
-    for (auto& v : verts) {
+    std::vector<sf::Vector2f> global;
+    for (const auto& v : baseVertices)
+        global.push_back(position + v * scaleFactor);
+    float minX = global[0].x, maxX = global[0].x;
+    float minY = global[0].y, maxY = global[0].y;
+    for (auto& v : global) {
         minX = std::min(minX, v.x);
         maxX = std::max(maxX, v.x);
         minY = std::min(minY, v.y);
         maxY = std::max(maxY, v.y);
     }
     float maxThick = *std::max_element(thicknesses.begin(), thicknesses.end());
-    return sf::FloatRect(position.x + minX - maxThick/2,
-                         position.y + minY - maxThick/2,
-                         (maxX - minX) + maxThick,
-                         (maxY - minY) + maxThick);
+    return sf::FloatRect(minX - maxThick/2, minY - maxThick/2,
+                         (maxX - minX) + maxThick, (maxY - minY) + maxThick);
 }
 
 bool Rectangle::contains(const sf::Vector2f& point) const {

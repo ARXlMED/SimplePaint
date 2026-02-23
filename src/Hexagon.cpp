@@ -3,28 +3,28 @@
 #include <algorithm>
 
 Hexagon::Hexagon(float radius, const sf::Color& color, const std::vector<float>& thicknesses)
-    : Figure(color, thicknesses), baseRadius(radius) {}
-
-std::vector<sf::Vector2f> Hexagon::getLocalVertices() const {
-    std::vector<sf::Vector2f> local;
-    float R = baseRadius * scaleFactor;
+    : Figure(color, thicknesses) {
+    baseVertices.clear();
     for (int i = 0; i < 6; ++i) {
         float angle = i * 2 * M_PI / 6 - M_PI/2;
-        local.emplace_back(R * std::cos(angle), R * std::sin(angle));
+        baseVertices.emplace_back(radius * std::cos(angle), radius * std::sin(angle));
     }
-    return local;
-}
-
-std::vector<sf::Vector2f> Hexagon::getGlobalVertices() const {
-    auto local = getLocalVertices();
-    std::vector<sf::Vector2f> global;
-    for (auto& v : local) global.push_back(position + v);
-    return global;
 }
 
 void Hexagon::draw(sf::RenderWindow& window) const {
-    auto verts = getGlobalVertices();
+    std::vector<sf::Vector2f> verts;
+    for (const auto& v : baseVertices)
+        verts.push_back(position + v * scaleFactor);
     int n = verts.size();
+
+    if (filled) {
+        sf::ConvexShape fillShape;
+        fillShape.setPointCount(n);
+        for (int i = 0; i < n; ++i)
+            fillShape.setPoint(i, verts[i]);
+        fillShape.setFillColor(fillColor);
+        window.draw(fillShape);
+    }
 
     for (int i = 0; i < n; ++i) {
         int j = (i + 1) % n;
@@ -80,10 +80,12 @@ void Hexagon::draw(sf::RenderWindow& window) const {
 }
 
 sf::FloatRect Hexagon::getBoundingBox() const {
-    auto verts = getGlobalVertices();
-    float minX = verts[0].x, maxX = verts[0].x;
-    float minY = verts[0].y, maxY = verts[0].y;
-    for (auto& v : verts) {
+    std::vector<sf::Vector2f> global;
+    for (const auto& v : baseVertices)
+        global.push_back(position + v * scaleFactor);
+    float minX = global[0].x, maxX = global[0].x;
+    float minY = global[0].y, maxY = global[0].y;
+    for (auto& v : global) {
         minX = std::min(minX, v.x);
         maxX = std::max(maxX, v.x);
         minY = std::min(minY, v.y);

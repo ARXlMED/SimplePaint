@@ -10,9 +10,4 @@ public:
     sf::FloatRect getBoundingBox() const override;
     void scale(float factor) override;
     void setScale(float factor) override;
-
-private:
-    float topBase, bottomBase, baseHeight;
-    std::vector<sf::Vector2f> getLocalVertices() const;
-    std::vector<sf::Vector2f> getGlobalVertices() const;
 };

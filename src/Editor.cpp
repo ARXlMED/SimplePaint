@@ -37,6 +37,19 @@ void Editor::draw(sf::RenderWindow& window) {
         rect.setOutlineColor(sf::Color::Red);
         rect.setOutlineThickness(1);
         window.draw(rect);
+
+        // Рисуем точку привязки (красный крестик)
+        sf::Vector2f pivot = selectedFigure->getGlobalPivot();
+        sf::Vertex line1[] = {
+            sf::Vertex(sf::Vector2f(pivot.x - 5, pivot.y - 5), sf::Color::Red),
+            sf::Vertex(sf::Vector2f(pivot.x + 5, pivot.y + 5), sf::Color::Red)
+        };
+        sf::Vertex line2[] = {
+            sf::Vertex(sf::Vector2f(pivot.x - 5, pivot.y + 5), sf::Color::Red),
+            sf::Vertex(sf::Vector2f(pivot.x + 5, pivot.y - 5), sf::Color::Red)
+        };
+        window.draw(line1, 2, sf::Lines);
+        window.draw(line2, 2, sf::Lines);
     }
 }
 
@@ -54,14 +67,14 @@ void Editor::removeSelected() {
     }
 }
 
+Figure* Editor::getSelected() const {
+    return selectedFigure;
+}
+
 void Editor::handleScale(float delta) {
     if (selectedFigure) {
         float newScale = selectedFigure->getScale() * (1.0f + delta * 0.1f);
         if (newScale > 0.1f && newScale < 5.0f)
             selectedFigure->setScale(newScale);
     }
-}
-
-Figure* Editor::getSelected() const {
-    return selectedFigure;
 }

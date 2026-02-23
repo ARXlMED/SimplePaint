@@ -11,7 +11,6 @@ public:
     void setScale(float factor) override;
 
 private:
-    float baseRadius;
     static constexpr int segments = 30;
     std::vector<sf::Vector2f> getPoints() const;
 };

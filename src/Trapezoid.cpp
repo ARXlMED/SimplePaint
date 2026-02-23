@@ -4,30 +4,29 @@
 
 Trapezoid::Trapezoid(float topBase, float bottomBase, float height,
                      const sf::Color& color, const std::vector<float>& thicknesses)
-    : Figure(color, thicknesses), topBase(topBase), bottomBase(bottomBase), baseHeight(height) {}
-
-std::vector<sf::Vector2f> Trapezoid::getLocalVertices() const {
-    float wTop = topBase * scaleFactor;
-    float wBottom = bottomBase * scaleFactor;
-    float h = baseHeight * scaleFactor;
-    return {
-        { -wBottom/2, -h/2 },
-        {  wBottom/2, -h/2 },
-        {  wTop/2,     h/2 },
-        { -wTop/2,     h/2 }
+    : Figure(color, thicknesses) {
+    baseVertices = {
+        { -bottomBase/2, -height/2 },
+        {  bottomBase/2, -height/2 },
+        {  topBase/2,     height/2 },
+        { -topBase/2,     height/2 }
     };
 }
 
-std::vector<sf::Vector2f> Trapezoid::getGlobalVertices() const {
-    auto local = getLocalVertices();
-    std::vector<sf::Vector2f> global;
-    for (auto& v : local) global.push_back(position + v);
-    return global;
-}
-
 void Trapezoid::draw(sf::RenderWindow& window) const {
-    auto verts = getGlobalVertices();
+    std::vector<sf::Vector2f> verts;
+    for (const auto& v : baseVertices)
+        verts.push_back(position + v * scaleFactor);
     int n = verts.size();
+
+    if (filled) {
+        sf::ConvexShape fillShape;
+        fillShape.setPointCount(n);
+        for (int i = 0; i < n; ++i)
+            fillShape.setPoint(i, verts[i]);
+        fillShape.setFillColor(fillColor);
+        window.draw(fillShape);
+    }
 
     for (int i = 0; i < n; ++i) {
         int j = (i + 1) % n;
@@ -83,10 +82,12 @@ void Trapezoid::draw(sf::RenderWindow& window) const {
 }
 
 sf::FloatRect Trapezoid::getBoundingBox() const {
-    auto verts = getGlobalVertices();
-    float minX = verts[0].x, maxX = verts[0].x;
-    float minY = verts[0].y, maxY = verts[0].y;
-    for (auto& v : verts) {
+    std::vector<sf::Vector2f> global;
+    for (const auto& v : baseVertices)
+        global.push_back(position + v * scaleFactor);
+    float minX = global[0].x, maxX = global[0].x;
+    float minY = global[0].y, maxY = global[0].y;
+    for (auto& v : global) {
         minX = std::min(minX, v.x);
         maxX = std::max(maxX, v.x);
         minY = std::min(minY, v.y);

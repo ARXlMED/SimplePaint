@@ -3,31 +3,48 @@
 #include <algorithm>
 
 Circle::Circle(float radius, const sf::Color& color, const std::vector<float>& thicknesses)
-    : Figure(color, thicknesses), baseRadius(radius) {}
+    : Figure(color, thicknesses) {
+    baseVertices.clear();
+    for (int i = 0; i < segments; ++i) {
+        float angle = 2 * M_PI * i / segments;
+        baseVertices.emplace_back(radius * std::cos(angle), radius * std::sin(angle));
+    }
+}
 
 std::vector<sf::Vector2f> Circle::getPoints() const {
-    float r = baseRadius * scaleFactor;
     std::vector<sf::Vector2f> points;
-    for (int i = 0; i <= segments; ++i) {
-        float angle = 2 * M_PI * i / segments;
-        points.push_back(position + sf::Vector2f(r * std::cos(angle), r * std::sin(angle)));
-    }
+    for (const auto& v : baseVertices)
+        points.push_back(position + v * scaleFactor);
+    points.push_back(position + baseVertices[0] * scaleFactor);
     return points;
 }
 
 void Circle::draw(sf::RenderWindow& window) const {
-    float thickness = thicknesses[0];
-    auto points = getPoints();
-    for (int i = 0; i < segments; ++i) {
-        drawThickLine(window, points[i], points[i+1], thickness, sideColors[0]);
+    float radius = 0;
+    if (!baseVertices.empty())
+        radius = std::sqrt(baseVertices[0].x * baseVertices[0].x + baseVertices[0].y * baseVertices[0].y) * scaleFactor;
+
+    if (filled) {
+        sf::CircleShape circle(radius);
+        circle.setOrigin(circle.getRadius(), circle.getRadius());
+        circle.setPosition(position);
+        circle.setFillColor(fillColor);
+        window.draw(circle);
     }
-    for (int i = 0; i < segments; ++i) {
-        drawVertexCircle(window, points[i], thickness/2, sideColors[0]);
+
+    auto points = getPoints();
+    int n = segments;
+    float thick = thicknesses[0];
+    for (int i = 0; i < n; ++i) {
+        drawThickLine(window, points[i], points[i+1], thick, sideColors[0]);
+    }
+    for (int i = 0; i < n; ++i) {
+        drawVertexCircle(window, points[i], thick/2, sideColors[0]);
     }
 }
 
 sf::FloatRect Circle::getBoundingBox() const {
-    float r = baseRadius * scaleFactor;
+    float r = baseVertices.empty() ? 0 : std::sqrt(baseVertices[0].x*baseVertices[0].x + baseVertices[0].y*baseVertices[0].y) * scaleFactor;
     float maxThick = thicknesses[0];
     return sf::FloatRect(position.x - r - maxThick/2,
                          position.y - r - maxThick/2,

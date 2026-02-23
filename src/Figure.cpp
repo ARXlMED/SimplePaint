@@ -3,7 +3,8 @@
 #include <algorithm>
 
 Figure::Figure(const sf::Color& color, const std::vector<float>& thicknesses)
-    : position(0, 0), scaleFactor(1.f), thicknesses(thicknesses) {
+    : position(0, 0), scaleFactor(1.f), thicknesses(thicknesses),
+      fillColor(sf::Color::White), filled(false), pivot(0,0) {
     sideColors.assign(thicknesses.size(), color);
 }
 
@@ -48,6 +49,22 @@ sf::Color Figure::getSideColor(int index) const {
 
 const std::vector<sf::Color>& Figure::getSideColors() const {
     return sideColors;
+}
+
+void Figure::setFillColor(sf::Color color) {
+    fillColor = color;
+}
+
+sf::Color Figure::getFillColor() const {
+    return fillColor;
+}
+
+void Figure::setFilled(bool filled) {
+    this->filled = filled;
+}
+
+bool Figure::isFilled() const {
+    return filled;
 }
 
 void Figure::drawThickLine(sf::RenderWindow& window, const sf::Vector2f& A,

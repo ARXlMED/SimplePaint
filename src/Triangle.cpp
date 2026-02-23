@@ -3,27 +3,29 @@
 #include <algorithm>
 
 Triangle::Triangle(float side, const sf::Color& color, const std::vector<float>& thicknesses)
-    : Figure(color, thicknesses), baseSide(side) {}
-
-std::vector<sf::Vector2f> Triangle::getLocalVertices() const {
-    float R = baseSide / std::sqrt(3.f) * scaleFactor;
-    std::vector<sf::Vector2f> local(3);
-    local[0] = {0.f, -R};
-    local[1] = {R * 0.866f, R * 0.5f};
-    local[2] = {-R * 0.866f, R * 0.5f};
-    return local;
-}
-
-std::vector<sf::Vector2f> Triangle::getGlobalVertices() const {
-    auto local = getLocalVertices();
-    std::vector<sf::Vector2f> global;
-    for (auto& v : local) global.push_back(position + v);
-    return global;
+    : Figure(color, thicknesses) {
+    float R = side / std::sqrt(3.f);
+    baseVertices = {
+        {0.f, -R},
+        {R * 0.866f, R * 0.5f},
+        {-R * 0.866f, R * 0.5f}
+    };
 }
 
 void Triangle::draw(sf::RenderWindow& window) const {
-    auto verts = getGlobalVertices();
+    std::vector<sf::Vector2f> verts;
+    for (const auto& v : baseVertices)
+        verts.push_back(position + v * scaleFactor);
     int n = verts.size();
+
+    if (filled) {
+        sf::ConvexShape fillShape;
+        fillShape.setPointCount(n);
+        for (int i = 0; i < n; ++i)
+            fillShape.setPoint(i, verts[i]);
+        fillShape.setFillColor(fillColor);
+        window.draw(fillShape);
+    }
 
     for (int i = 0; i < n; ++i) {
         int j = (i + 1) % n;
@@ -79,10 +81,12 @@ void Triangle::draw(sf::RenderWindow& window) const {
 }
 
 sf::FloatRect Triangle::getBoundingBox() const {
-    auto verts = getGlobalVertices();
-    float minX = verts[0].x, maxX = verts[0].x;
-    float minY = verts[0].y, maxY = verts[0].y;
-    for (auto& v : verts) {
+    std::vector<sf::Vector2f> global;
+    for (const auto& v : baseVertices)
+        global.push_back(position + v * scaleFactor);
+    float minX = global[0].x, maxX = global[0].x;
+    float minY = global[0].y, maxY = global[0].y;
+    for (auto& v : global) {
         minX = std::min(minX, v.x);
         maxX = std::max(maxX, v.x);
         minY = std::min(minY, v.y);

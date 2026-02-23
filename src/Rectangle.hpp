@@ -12,7 +12,5 @@ public:
     void setScale(float factor) override;
 
 private:
-    float baseWidth, baseHeight;
-    std::vector<sf::Vector2f> getLocalVertices() const;
-    std::vector<sf::Vector2f> getGlobalVertices() const;
+    // Больше не храним baseWidth/baseHeight, они в baseVertices
 };
