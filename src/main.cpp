@@ -102,7 +102,7 @@ void drawEditWindow(sf::RenderWindow& window, Figure* fig, const sf::Font& font,
                     std::vector<InputField>& fields, sf::FloatRect& panelBounds) {
     sf::Vector2u winSize = window.getSize();
     float panelWidth = 420;
-    float panelHeight = 1050; // оптимальная высота для большинства экранов
+    float panelHeight = 1050;
     float panelX = winSize.x - panelWidth - 20;
     float panelY = 20;
 
@@ -119,7 +119,7 @@ void drawEditWindow(sf::RenderWindow& window, Figure* fig, const sf::Font& font,
     float marginLeft = 20;
     float marginTop = 20;
     float currentY = panelY + marginTop;
-    float lineSpacing = 45; // чуть меньше
+    float lineSpacing = 45;
     float fieldWidth = 140;
     float fieldHeight = 40;
     float smallFieldWidth = 100;
@@ -357,7 +357,6 @@ void drawEditWindow(sf::RenderWindow& window, Figure* fig, const sf::Font& font,
 
             float baseX = panelX + marginLeft + 30;
 
-            // Подпись вершины слева
             sf::Text vertexLabel;
             vertexLabel.setFont(font);
             vertexLabel.setCharacterSize(22);
@@ -366,7 +365,6 @@ void drawEditWindow(sf::RenderWindow& window, Figure* fig, const sf::Font& font,
             vertexLabel.setString("V" + std::to_string(i) + ":");
             window.draw(vertexLabel);
 
-            // Поле X (без отдельной подписи)
             sf::RectangleShape rectVX({fieldWidth, fieldHeight});
             rectVX.setPosition(baseX, currentY);
             rectVX.setFillColor(sf::Color::White);
@@ -383,7 +381,6 @@ void drawEditWindow(sf::RenderWindow& window, Figure* fig, const sf::Font& font,
             valVX.setString(std::to_string((int)rel.x));
             window.draw(valVX);
 
-            // Поле Y (без отдельной подписи)
             float baseY = baseX + fieldWidth + 10;
             sf::RectangleShape rectVY({fieldWidth, fieldHeight});
             rectVY.setPosition(baseY, currentY);
@@ -405,13 +402,12 @@ void drawEditWindow(sf::RenderWindow& window, Figure* fig, const sf::Font& font,
         }
     }
 
-    // Hint
     sf::Text hint;
     hint.setFont(font);
     hint.setCharacterSize(18);
     hint.setFillColor(sf::Color::Yellow);
     hint.setPosition(panelX + marginLeft, currentY + 10);
-    hint.setString("Click white fields or color squares to edit");
+    hint.setString("Click white fields to edit");
     window.draw(hint);
 }
 
@@ -429,7 +425,7 @@ int main() {
     float hexRadius = 80;
 
     sf::Color currentOutlineColor = sf::Color::White;
-    std::vector<int> currentThicknesses(6, 2); // теперь целые
+    std::vector<int> currentThicknesses(6, 2); // целые
     int selectedIndex = 0;
     Mode currentMode = Mode::THICKNESS;
     sf::Color currentFillColor = sf::Color::White;
@@ -499,6 +495,7 @@ int main() {
     helpText.setPosition(10, 10);
     std::ostringstream helpOss;
     helpOss << "F1: toggle help\n"
+            << "1-6: select shape\n"
             << "Click figure to edit\n"
             << "Arrow keys: adjust param\n"
             << "F: switch mode\n"
@@ -575,10 +572,9 @@ int main() {
                             }
 
                             if (isColorTarget) {
-                                // здесь можно добавить диалог выбора цвета, пока игнорируем
+                                // Здесь можно добавить диалог выбора цвета, пока игнорируем
                             } else {
                                 currentEditTarget = field.target;
-                                // Устанавливаем TextBox точно в границы поля
                                 inputBox.setPosition(field.bounds.left, field.bounds.top);
                                 inputBox.setSize(field.bounds.width, field.bounds.height);
                                 inputBox.activate(initialValue);
@@ -603,6 +599,15 @@ int main() {
                     showHelp = !showHelp;
                 }
 
+                // Выбор типа фигуры цифрами 1-6
+                if (event.key.code == sf::Keyboard::Num1) currentShape = ShapeType::Rectangle;
+                else if (event.key.code == sf::Keyboard::Num2) currentShape = ShapeType::Triangle;
+                else if (event.key.code == sf::Keyboard::Num3) currentShape = ShapeType::Trapezoid;
+                else if (event.key.code == sf::Keyboard::Num4) currentShape = ShapeType::Circle;
+                else if (event.key.code == sf::Keyboard::Num5) currentShape = ShapeType::Pentagon;
+                else if (event.key.code == sf::Keyboard::Num6) currentShape = ShapeType::Hexagon;
+
+                // Переключение режимов по F
                 if (event.key.code == sf::Keyboard::F && !event.key.shift) {
                     switch (currentMode) {
                         case Mode::THICKNESS: currentMode = Mode::COLOR; break;
@@ -613,6 +618,7 @@ int main() {
                     }
                 }
 
+                // Стрелки для пивота и вершин
                 if (event.key.code == sf::Keyboard::Up || event.key.code == sf::Keyboard::Down ||
                     event.key.code == sf::Keyboard::Left || event.key.code == sf::Keyboard::Right) {
                     if (editor.getSelected()) {
@@ -634,6 +640,7 @@ int main() {
                             }
                         }
                     } else {
+                        // Стрелки меняют параметры будущих фигур
                         switch (currentShape) {
                             case ShapeType::Rectangle:
                                 if (event.key.code == sf::Keyboard::Up) rectHeight += 5;
@@ -759,6 +766,7 @@ int main() {
                     }
                 }
 
+                // Обработка T для толщины
                 if (event.key.code == sf::Keyboard::T) {
                     if (auto* sel = editor.getSelected()) {
                         int numSides = sel->getThicknesses().size();
@@ -787,6 +795,7 @@ int main() {
                     }
                 }
 
+                // Обработка Y для переключения индекса
                 if (event.key.code == sf::Keyboard::Y && !event.key.shift) {
                     int maxIndex = 0;
                     if (editor.getSelected()) {
@@ -810,6 +819,7 @@ int main() {
                     }
                 }
 
+                // Добавление новой фигуры (Space)
                 if (event.key.code == sf::Keyboard::Space) {
                     std::vector<float> thicknesses;
                     sf::Vector2u winSize = window.getSize();
@@ -850,6 +860,7 @@ int main() {
                     }
                 }
 
+                // Удаление выделенной фигуры
                 if (event.key.code == sf::Keyboard::Delete) {
                     editor.removeSelected();
                 }
