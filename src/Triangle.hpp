@@ -1,12 +1,7 @@
 #pragma once
-#include "Figure.hpp"
+#include "PolylineFigure.hpp"
 
-class Triangle : public Figure {
+class Triangle : public PolylineFigure {
 public:
     Triangle(float side, const sf::Color& color, const std::vector<float>& thicknesses);
-    void draw(sf::RenderWindow& window) const override;
-    bool contains(const sf::Vector2f& point) const override;
-    sf::FloatRect getBoundingBox() const override;
-    void scale(float factor) override;
-    void setScale(float factor) override;
 };

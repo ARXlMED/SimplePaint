@@ -1,12 +1,7 @@
 #pragma once
-#include "Figure.hpp"
+#include "PolylineFigure.hpp"
 
-class Hexagon : public Figure {
+class Hexagon : public PolylineFigure {
 public:
     Hexagon(float radius, const sf::Color& color, const std::vector<float>& thicknesses);
-    void draw(sf::RenderWindow& window) const override;
-    bool contains(const sf::Vector2f& point) const override;
-    sf::FloatRect getBoundingBox() const override;
-    void scale(float factor) override;
-    void setScale(float factor) override;
 };

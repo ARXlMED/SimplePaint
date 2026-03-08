@@ -13,6 +13,10 @@ FetchContent_MakeAvailable(SFML)
 
 set(SOURCES
     src/main.cpp
+    src/AbstractFigure.cpp
+    src/PolylineFigure.cpp
+    src/CompositeFigure.cpp
+    src/FigureManager.cpp
     src/Figure.cpp
     src/Rectangle.cpp
     src/Triangle.cpp

@@ -13,17 +13,11 @@
 #include "Circle.hpp"
 #include "Pentagon.hpp"
 #include "Hexagon.hpp"
+#include "CompositeFigure.hpp"
+#include "FigureManager.hpp"
 #include "TextBox.hpp"
 
-enum class ShapeType {
-    Rectangle,
-    Triangle,
-    Trapezoid,
-    Circle,
-    Pentagon,
-    Hexagon
-};
-
+// Глобальные перечисления и вспомогательные функции
 enum class Mode {
     THICKNESS,
     COLOR,
@@ -67,6 +61,7 @@ struct InputField {
     int index;
 };
 
+// Функция рисования поля ввода
 void drawInputField(sf::RenderWindow& window, const sf::Font& font,
                     const std::string& label, const std::string& value,
                     float x, float y, float width, float height,
@@ -97,12 +92,13 @@ void drawInputField(sf::RenderWindow& window, const sf::Font& font,
     window.draw(labelText);
 }
 
-void drawEditWindow(sf::RenderWindow& window, Figure* fig, const sf::Font& font,
+// Функция рисования окна редактирования
+void drawEditWindow(sf::RenderWindow& window, AbstractFigure* fig, const sf::Font& font,
                     Mode currentMode, int selectedIndex,
                     std::vector<InputField>& fields, sf::FloatRect& panelBounds) {
     sf::Vector2u winSize = window.getSize();
     float panelWidth = 420;
-    float panelHeight = 1050;
+    float panelHeight = 1100;
     float panelX = winSize.x - panelWidth - 20;
     float panelY = 20;
 
@@ -145,7 +141,7 @@ void drawEditWindow(sf::RenderWindow& window, Figure* fig, const sf::Font& font,
 
     float fieldX1 = panelX + marginLeft;
     float fieldX2 = fieldX1 + fieldWidth + 20;
-    float fieldY = currentY + 10;
+    float fieldY = currentY;
 
     // Global X
     sf::Text labelX;
@@ -204,12 +200,12 @@ void drawEditWindow(sf::RenderWindow& window, Figure* fig, const sf::Font& font,
     scaleText.setFont(font);
     scaleText.setCharacterSize(24);
     scaleText.setFillColor(sf::Color::White);
-    scaleText.setPosition(panelX + marginLeft, currentY + 10);
+    scaleText.setPosition(panelX + marginLeft, currentY);
     scaleText.setString("Scale: " + std::to_string(fig->getScale()));
     window.draw(scaleText);
     currentY += lineSpacing;
 
-    fieldY = currentY + 20;
+    fieldY = currentY;
 
     // Pivot X
     sf::Text labelPivotX;
@@ -261,7 +257,7 @@ void drawEditWindow(sf::RenderWindow& window, Figure* fig, const sf::Font& font,
     valPY.setString(std::to_string((int)fig->getLocalPivot().y));
     window.draw(valPY);
 
-    currentY += fieldHeight + lineSpacing - 20;
+    currentY += fieldHeight + lineSpacing - 40;
 
     // Filled info
     sf::Text fillText;
@@ -282,65 +278,65 @@ void drawEditWindow(sf::RenderWindow& window, Figure* fig, const sf::Font& font,
     window.draw(fillColorText);
     currentY += lineSpacing;
 
-    // Thicknesses & colors
-    sf::Text thickTitle;
-    thickTitle.setFont(font);
-    thickTitle.setCharacterSize(24);
-    thickTitle.setFillColor(sf::Color::White);
-    thickTitle.setPosition(panelX + marginLeft, currentY);
-    thickTitle.setString("Thicknesses & colors:");
-    window.draw(thickTitle);
-    currentY += 35;
+    if (auto* poly = dynamic_cast<PolylineFigure*>(fig)) {
+        sf::Text thickTitle;
+        thickTitle.setFont(font);
+        thickTitle.setCharacterSize(24);
+        thickTitle.setFillColor(sf::Color::White);
+        thickTitle.setPosition(panelX + marginLeft, currentY);
+        thickTitle.setString("Thicknesses & colors:");
+        window.draw(thickTitle);
+        currentY += 35;
 
-    const auto& thick = fig->getThicknesses();
-    const auto& colors = fig->getSideColors();
-    for (size_t i = 0; i < thick.size(); ++i) {
-        sf::Text sideLabel;
-        sideLabel.setFont(font);
-        sideLabel.setCharacterSize(20);
-        sideLabel.setFillColor(sf::Color::White);
-        sideLabel.setPosition(panelX + marginLeft, currentY + 5);
-        sideLabel.setString("Side " + std::to_string(i) + ":");
-        window.draw(sideLabel);
+        const auto& thick = poly->getThicknesses();
+        const auto& colors = poly->getSideColors();
+        for (size_t i = 0; i < thick.size(); ++i) {
+            sf::Text sideLabel;
+            sideLabel.setFont(font);
+            sideLabel.setCharacterSize(20);
+            sideLabel.setFillColor(sf::Color::White);
+            sideLabel.setPosition(panelX + marginLeft, currentY + 5);
+            sideLabel.setString("Side " + std::to_string(i) + ":");
+            window.draw(sideLabel);
 
-        sf::RectangleShape rectThick({smallFieldWidth, fieldHeight});
-        rectThick.setPosition(panelX + marginLeft + 80, currentY);
-        rectThick.setFillColor(sf::Color::White);
-        rectThick.setOutlineColor(sf::Color::Black);
-        rectThick.setOutlineThickness(1);
-        window.draw(rectThick);
-        fields.push_back({rectThick.getGlobalBounds(), EditTarget::THICKNESS, (int)i});
+            sf::RectangleShape rectThick({smallFieldWidth, fieldHeight});
+            rectThick.setPosition(panelX + marginLeft + 80, currentY);
+            rectThick.setFillColor(sf::Color::White);
+            rectThick.setOutlineColor(sf::Color::Black);
+            rectThick.setOutlineThickness(1);
+            window.draw(rectThick);
+            fields.push_back({rectThick.getGlobalBounds(), EditTarget::THICKNESS, (int)i});
 
-        sf::Text valThick;
-        valThick.setFont(font);
-        valThick.setCharacterSize(24);
-        valThick.setFillColor(sf::Color::Black);
-        valThick.setPosition(panelX + marginLeft + 85, currentY + 5);
-        valThick.setString(std::to_string((int)thick[i]));
-        window.draw(valThick);
+            sf::Text valThick;
+            valThick.setFont(font);
+            valThick.setCharacterSize(24);
+            valThick.setFillColor(sf::Color::Black);
+            valThick.setPosition(panelX + marginLeft + 85, currentY + 5);
+            valThick.setString(std::to_string((int)thick[i]));
+            window.draw(valThick);
 
-        sf::RectangleShape colorRect({colorBoxSize, colorBoxSize});
-        colorRect.setFillColor(colors[i]);
-        colorRect.setPosition(panelX + marginLeft + 80 + smallFieldWidth + 20, currentY);
-        window.draw(colorRect);
-        fields.push_back({colorRect.getGlobalBounds(), EditTarget::SIDE_COLOR, (int)i});
+            sf::RectangleShape colorRect({colorBoxSize, colorBoxSize});
+            colorRect.setFillColor(colors[i]);
+            colorRect.setPosition(panelX + marginLeft + 80 + smallFieldWidth + 20, currentY);
+            window.draw(colorRect);
+            fields.push_back({colorRect.getGlobalBounds(), EditTarget::SIDE_COLOR, (int)i});
 
-        if ((currentMode == Mode::THICKNESS || currentMode == Mode::COLOR) && i == (size_t)selectedIndex) {
-            sf::Text marker;
-            marker.setFont(font);
-            marker.setCharacterSize(28);
-            marker.setFillColor(sf::Color::Yellow);
-            marker.setPosition(panelX + marginLeft + 80 + smallFieldWidth + 20 + colorBoxSize + 10, currentY);
-            marker.setString("<--");
-            window.draw(marker);
+            if ((currentMode == Mode::THICKNESS || currentMode == Mode::COLOR) && i == (size_t)selectedIndex) {
+                sf::Text marker;
+                marker.setFont(font);
+                marker.setCharacterSize(28);
+                marker.setFillColor(sf::Color::Yellow);
+                marker.setPosition(panelX + marginLeft + 80 + smallFieldWidth + 20 + colorBoxSize + 10, currentY);
+                marker.setString("<--");
+                window.draw(marker);
+            }
+
+            currentY += fieldHeight + 8;
         }
-
-        currentY += fieldHeight + 8;
+        currentY += 15;
     }
-    currentY += 15;
 
-    // Vertices (compact view)
-    if (currentMode == Mode::VERTEX) {
+    if (fig->getVertexCount() > 0 && currentMode == Mode::VERTEX) {
         sf::Text vertexTitle;
         vertexTitle.setFont(font);
         vertexTitle.setCharacterSize(24);
@@ -407,16 +403,52 @@ void drawEditWindow(sf::RenderWindow& window, Figure* fig, const sf::Font& font,
     hint.setCharacterSize(18);
     hint.setFillColor(sf::Color::Yellow);
     hint.setPosition(panelX + marginLeft, currentY + 10);
-    hint.setString("Click white fields to edit");
+    hint.setString("Click white fields or color squares to edit");
     window.draw(hint);
 }
 
 int main() {
+    // Регистрируем встроенные фигуры в FigureManager (опционально)
+    FigureManager::instance().registerType("Rectangle",
+        [](const sf::Color& color, const std::vector<float>& t) -> std::unique_ptr<AbstractFigure> {
+            return std::make_unique<Rectangle>(150, 100, color, t);
+        });
+    FigureManager::instance().registerType("Triangle",
+        [](const sf::Color& color, const std::vector<float>& t) -> std::unique_ptr<AbstractFigure> {
+            return std::make_unique<Triangle>(120, color, t);
+        });
+    FigureManager::instance().registerType("Trapezoid",
+        [](const sf::Color& color, const std::vector<float>& t) -> std::unique_ptr<AbstractFigure> {
+            return std::make_unique<Trapezoid>(80, 140, 100, color, t);
+        });
+    FigureManager::instance().registerType("Circle",
+        [](const sf::Color& color, const std::vector<float>& t) -> std::unique_ptr<AbstractFigure> {
+            return std::make_unique<Circle>(70, color, t);
+        });
+    FigureManager::instance().registerType("Pentagon",
+        [](const sf::Color& color, const std::vector<float>& t) -> std::unique_ptr<AbstractFigure> {
+            return std::make_unique<Pentagon>(80, color, t);
+        });
+    FigureManager::instance().registerType("Hexagon",
+        [](const sf::Color& color, const std::vector<float>& t) -> std::unique_ptr<AbstractFigure> {
+            return std::make_unique<Hexagon>(80, color, t);
+        });
+
     sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "Simple Paint", sf::Style::Fullscreen);
     window.setFramerateLimit(60);
     Editor editor;
 
-    ShapeType currentShape = ShapeType::Rectangle;
+    // Переменные для встроенных фигур
+    enum class BuiltinType {
+        Rectangle,
+        Triangle,
+        Trapezoid,
+        Circle,
+        Pentagon,
+        Hexagon
+    };
+    BuiltinType currentBuiltin = BuiltinType::Rectangle;
+
     float rectWidth = 150, rectHeight = 100;
     float triSide = 120;
     float trapTop = 80, trapBottom = 140, trapHeight = 100;
@@ -425,17 +457,88 @@ int main() {
     float hexRadius = 80;
 
     sf::Color currentOutlineColor = sf::Color::White;
-    std::vector<int> currentThicknesses(6, 2); // целые
+    std::vector<float> currentThicknesses(6, 2.0f);
     int selectedIndex = 0;
     Mode currentMode = Mode::THICKNESS;
     sf::Color currentFillColor = sf::Color::White;
 
+    // Для составных фигур
+    std::vector<AbstractFigure*> selectedFigures; // сырые указатели на временно выделенные фигуры (для группировки)
+
+    
+
+    // Шрифт и текст
+    sf::Font font;
+    std::vector<std::string> fontPaths = {
+        "resources/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+        "/usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf"
+    };
+    bool fontLoaded = false;
+    for (const auto& path : fontPaths) {
+        if (font.loadFromFile(path)) {
+            std::cout << "Loaded font: " << path << std::endl;
+            fontLoaded = true;
+            break;
+        } else {
+            std::cout << "Failed to load: " << path << std::endl;
+        }
+    }
+    if (!fontLoaded) {
+        std::cerr << "Error: no font loaded. Text will not be displayed." << std::endl;
+    }
+
+// Для создания новой полилинии
+    bool creatingPolyline = false;
+    bool nameInputActive = false;
+    std::unique_ptr<PolylineFigure> newPolyline;
+    TextBox nameInputBox(font, 24); // для ввода имени
+
+    sf::Text helpText;
+    helpText.setFont(font);
+    helpText.setCharacterSize(16);
+    helpText.setFillColor(sf::Color::White);
+    helpText.setPosition(10, 10);
+    std::ostringstream helpOss;
+    helpOss << "F1: toggle help\n"
+            << "1-6: select built-in shape\n"
+            << "Click figure to edit\n"
+            << "Arrow keys: adjust param\n"
+            << "F: switch mode\n"
+            << "R/G/B: change color (Shift+ inc)\n"
+            << "T: inc thickness, Shift+T: dec\n"
+            << "Y: next side/vertex\n"
+            << "Ctrl+G: add selected to group\n"
+            << "Ctrl+Shift+G: create composite from group\n"
+            << "U: ungroup selected composite\n"
+            << "N: new polyline (click to add points, Enter to finish)\n"
+            << "Delete: remove selected\n"
+            << "Mouse wheel: scale";
+    helpText.setString(helpOss.str());
+
+    sf::Text exitButton;
+    exitButton.setFont(font);
+    exitButton.setCharacterSize(28);
+    exitButton.setFillColor(sf::Color::Red);
+    exitButton.setString("X");
+    exitButton.setPosition(window.getSize().x - exitButton.getLocalBounds().width - 20, 10);
+
+    bool showHelp = true;
+
+    TextBox inputBox(font, 24);
+    EditTarget currentEditTarget = EditTarget::NONE;
+    int editIndex = 0;
+    std::vector<InputField> inputFields;
+    sf::FloatRect panelBounds;
+
+    // Начальные фигуры
     auto createInitialShapes = [&]() {
         sf::Vector2u winSize = window.getSize();
         float cx = winSize.x / 2.f;
         float cy = winSize.y / 2.f;
 
-        /*auto rect = std::make_unique<Rectangle>(150, 100, sf::Color::Red, std::vector<float>{2,2,2,2});
+        auto rect = std::make_unique<Rectangle>(150, 100, sf::Color::Red, std::vector<float>{2,2,2,2});
         rect->setPosition({cx - 250, cy - 150});
         rect->setFillColor(sf::Color::Yellow);
         rect->setFilled(true);
@@ -463,67 +566,21 @@ int main() {
         hex->setPosition({cx + 250, cy + 200});
         hex->setFillColor(sf::Color::Red);
         hex->setFilled(true);
-        editor.addFigure(std::move(hex));*/
+        editor.addFigure(std::move(hex));
     };
     createInitialShapes();
-
-    sf::Font font;
-    std::vector<std::string> fontPaths = {
-        "resources/DejaVuSans.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-        "/usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf"
-    };
-    bool fontLoaded = false;
-    for (const auto& path : fontPaths) {
-        if (font.loadFromFile(path)) {
-            std::cout << "Loaded font: " << path << std::endl;
-            fontLoaded = true;
-            break;
-        } else {
-            std::cout << "Failed to load: " << path << std::endl;
-        }
-    }
-    if (!fontLoaded) {
-        std::cerr << "Error: no font loaded. Text will not be displayed." << std::endl;
-    }
-
-    sf::Text helpText;
-    helpText.setFont(font);
-    helpText.setCharacterSize(16);
-    helpText.setFillColor(sf::Color::White);
-    helpText.setPosition(10, 10);
-    std::ostringstream helpOss;
-    helpOss << "F1: toggle help\n"
-            << "1-6: select shape\n"
-            << "Click figure to edit\n"
-            << "Arrow keys: adjust param\n"
-            << "F: switch mode\n"
-            << "R/G/B: change color (Shift+ inc)\n"
-            << "T: inc thickness, Shift+T: dec\n"
-            << "Y: next side/vertex\n"
-            << "Delete: remove\n"
-            << "Mouse wheel: scale";
-    helpText.setString(helpOss.str());
-
-    sf::Text exitButton;
-    exitButton.setFont(font);
-    exitButton.setCharacterSize(28);
-    exitButton.setFillColor(sf::Color::Red);
-    exitButton.setString("X");
-    exitButton.setPosition(window.getSize().x - exitButton.getLocalBounds().width - 20, 10);
-
-    bool showHelp = true;
-
-    TextBox inputBox(font, 24);
-    EditTarget currentEditTarget = EditTarget::NONE;
-    int editIndex = 0;
-    std::vector<InputField> inputFields;
-    sf::FloatRect panelBounds;
 
     while (window.isOpen()) {
         sf::Event event;
         while (window.pollEvent(event)) {
+            // Сначала обрабатываем активные поля ввода
+            if (nameInputBox.isActive()) {
+                nameInputBox.handleEvent(event);
+                if (!nameInputBox.isActive()) {
+                    nameInputActive = false;
+                }
+                continue;
+            }
             if (inputBox.isActive()) {
                 inputBox.handleEvent(event);
                 continue;
@@ -533,20 +590,23 @@ int main() {
                 window.close();
             }
 
+            // Обработка мыши
             if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left) {
                 sf::Vector2i mousePos(event.mouseButton.x, event.mouseButton.y);
                 sf::Vector2f worldPos = window.mapPixelToCoords(mousePos);
 
+                // Проверка крестика выхода
                 sf::FloatRect exitRect(exitButton.getPosition().x, exitButton.getPosition().y,
                                         exitButton.getLocalBounds().width, exitButton.getLocalBounds().height);
                 if (exitRect.contains(worldPos)) {
                     window.close();
                 }
 
+                // Клик в панели редактирования
                 if (panelBounds.contains(worldPos)) {
                     for (const auto& field : inputFields) {
                         if (field.bounds.contains(worldPos)) {
-                            Figure* sel = editor.getSelected();
+                            AbstractFigure* sel = editor.getSelected();
                             if (!sel) break;
 
                             float initialValue = 0;
@@ -560,19 +620,23 @@ int main() {
                                 case EditTarget::VERTEX_X: initialValue = sel->getLocalVertex(field.index).x; break;
                                 case EditTarget::VERTEX_Y: initialValue = sel->getLocalVertex(field.index).y; break;
                                 case EditTarget::THICKNESS:
-                                    initialValue = sel->getThicknesses()[field.index];
-                                    editIndex = field.index;
+                                    if (auto* poly = dynamic_cast<PolylineFigure*>(sel)) {
+                                        initialValue = poly->getThicknesses()[field.index];
+                                        editIndex = field.index;
+                                    }
                                     break;
                                 case EditTarget::SIDE_COLOR:
-                                    initialColor = sel->getSideColor(field.index);
-                                    isColorTarget = true;
-                                    editIndex = field.index;
+                                    if (auto* poly = dynamic_cast<PolylineFigure*>(sel)) {
+                                        initialColor = poly->getSideColors()[field.index];
+                                        isColorTarget = true;
+                                        editIndex = field.index;
+                                    }
                                     break;
                                 default: break;
                             }
 
                             if (isColorTarget) {
-                                // Здесь можно добавить диалог выбора цвета, пока игнорируем
+                                // TODO: реализовать редактирование цвета через TextBox (можно ввести R G B)
                             } else {
                                 currentEditTarget = field.target;
                                 inputBox.setPosition(field.bounds.left, field.bounds.top);
@@ -583,29 +647,38 @@ int main() {
                         }
                     }
                 } else {
+                    // Клик вне панели – передаём редактору
                     editor.handleEvent(event, window);
                 }
+
+                // Если мы в режиме создания полилинии и имя введено, добавляем вершину
+                if (creatingPolyline && !nameInputActive) {
+                    newPolyline->addVertex(worldPos);
+                }
             } else {
+                // Другие события мыши (движение) – передаём редактору
                 editor.handleEvent(event, window);
             }
 
+            // Колесо мыши
             if (event.type == sf::Event::MouseWheelScrolled && editor.getSelected()) {
                 float delta = event.mouseWheelScroll.delta;
                 editor.handleScale(delta);
             }
 
+            // Клавиши
             if (event.type == sf::Event::KeyPressed) {
                 if (event.key.code == sf::Keyboard::F1) {
                     showHelp = !showHelp;
                 }
 
-                // Выбор типа фигуры цифрами 1-6
-                if (event.key.code == sf::Keyboard::Num1) currentShape = ShapeType::Rectangle;
-                else if (event.key.code == sf::Keyboard::Num2) currentShape = ShapeType::Triangle;
-                else if (event.key.code == sf::Keyboard::Num3) currentShape = ShapeType::Trapezoid;
-                else if (event.key.code == sf::Keyboard::Num4) currentShape = ShapeType::Circle;
-                else if (event.key.code == sf::Keyboard::Num5) currentShape = ShapeType::Pentagon;
-                else if (event.key.code == sf::Keyboard::Num6) currentShape = ShapeType::Hexagon;
+                // Выбор встроенной фигуры цифрами 1-6
+                if (event.key.code == sf::Keyboard::Num1) currentBuiltin = BuiltinType::Rectangle;
+                else if (event.key.code == sf::Keyboard::Num2) currentBuiltin = BuiltinType::Triangle;
+                else if (event.key.code == sf::Keyboard::Num3) currentBuiltin = BuiltinType::Trapezoid;
+                else if (event.key.code == sf::Keyboard::Num4) currentBuiltin = BuiltinType::Circle;
+                else if (event.key.code == sf::Keyboard::Num5) currentBuiltin = BuiltinType::Pentagon;
+                else if (event.key.code == sf::Keyboard::Num6) currentBuiltin = BuiltinType::Hexagon;
 
                 // Переключение режимов по F
                 if (event.key.code == sf::Keyboard::F && !event.key.shift) {
@@ -618,11 +691,11 @@ int main() {
                     }
                 }
 
-                // Стрелки для пивота и вершин
+                // Стрелки
                 if (event.key.code == sf::Keyboard::Up || event.key.code == sf::Keyboard::Down ||
                     event.key.code == sf::Keyboard::Left || event.key.code == sf::Keyboard::Right) {
                     if (editor.getSelected()) {
-                        Figure* sel = editor.getSelected();
+                        AbstractFigure* sel = editor.getSelected();
                         int dx = 0, dy = 0;
                         if (event.key.code == sf::Keyboard::Up) dy = -1;
                         else if (event.key.code == sf::Keyboard::Down) dy = 1;
@@ -640,33 +713,33 @@ int main() {
                             }
                         }
                     } else {
-                        // Стрелки меняют параметры будущих фигур
-                        switch (currentShape) {
-                            case ShapeType::Rectangle:
+                        // Стрелки для изменения размеров будущей встроенной фигуры
+                        switch (currentBuiltin) {
+                            case BuiltinType::Rectangle:
                                 if (event.key.code == sf::Keyboard::Up) rectHeight += 5;
                                 else if (event.key.code == sf::Keyboard::Down) rectHeight = std::max(10.0f, rectHeight - 5);
                                 else if (event.key.code == sf::Keyboard::Left) rectWidth = std::max(10.0f, rectWidth - 5);
                                 else if (event.key.code == sf::Keyboard::Right) rectWidth += 5;
                                 break;
-                            case ShapeType::Triangle:
+                            case BuiltinType::Triangle:
                                 if (event.key.code == sf::Keyboard::Up) triSide += 5;
                                 else if (event.key.code == sf::Keyboard::Down) triSide = std::max(10.0f, triSide - 5);
                                 break;
-                            case ShapeType::Trapezoid:
+                            case BuiltinType::Trapezoid:
                                 if (event.key.code == sf::Keyboard::Up) trapHeight += 5;
                                 else if (event.key.code == sf::Keyboard::Down) trapHeight = std::max(10.0f, trapHeight - 5);
                                 else if (event.key.code == sf::Keyboard::Left) trapTop = std::max(10.0f, trapTop - 5);
                                 else if (event.key.code == sf::Keyboard::Right) trapTop += 5;
                                 break;
-                            case ShapeType::Circle:
+                            case BuiltinType::Circle:
                                 if (event.key.code == sf::Keyboard::Up) circleRadius += 2;
                                 else if (event.key.code == sf::Keyboard::Down) circleRadius = std::max(5.0f, circleRadius - 2);
                                 break;
-                            case ShapeType::Pentagon:
+                            case BuiltinType::Pentagon:
                                 if (event.key.code == sf::Keyboard::Up) pentRadius += 2;
                                 else if (event.key.code == sf::Keyboard::Down) pentRadius = std::max(5.0f, pentRadius - 2);
                                 break;
-                            case ShapeType::Hexagon:
+                            case BuiltinType::Hexagon:
                                 if (event.key.code == sf::Keyboard::Up) hexRadius += 2;
                                 else if (event.key.code == sf::Keyboard::Down) hexRadius = std::max(5.0f, hexRadius - 2);
                                 break;
@@ -674,7 +747,7 @@ int main() {
                     }
                 }
 
-                // Обработка R, G, B
+                // Цветовые клавиши R, G, B
                 if (event.key.code == sf::Keyboard::R) {
                     if (currentMode == Mode::FILL) {
                         if (auto* sel = editor.getSelected()) {
@@ -689,12 +762,14 @@ int main() {
                         }
                     } else if (currentMode == Mode::COLOR) {
                         if (auto* sel = editor.getSelected()) {
-                            int numSides = sel->getThicknesses().size();
-                            if (selectedIndex < numSides) {
-                                sf::Color col = sel->getSideColor(selectedIndex);
-                                if (event.key.shift) col.r = std::min(255, col.r + 10);
-                                else col.r = std::max(0, col.r - 10);
-                                sel->setSideColor(selectedIndex, col);
+                            if (auto* poly = dynamic_cast<PolylineFigure*>(sel)) {
+                                int numSides = poly->getThicknesses().size();
+                                if (selectedIndex < numSides) {
+                                    sf::Color col = poly->getSideColor(selectedIndex);
+                                    if (event.key.shift) col.r = std::min(255, col.r + 10);
+                                    else col.r = std::max(0, col.r - 10);
+                                    poly->setSideColor(selectedIndex, col);
+                                }
                             }
                         } else {
                             if (event.key.shift) currentOutlineColor.r = std::min(255, currentOutlineColor.r + 10);
@@ -719,12 +794,14 @@ int main() {
                         }
                     } else if (currentMode == Mode::COLOR) {
                         if (auto* sel = editor.getSelected()) {
-                            int numSides = sel->getThicknesses().size();
-                            if (selectedIndex < numSides) {
-                                sf::Color col = sel->getSideColor(selectedIndex);
-                                if (event.key.shift) col.g = std::min(255, col.g + 10);
-                                else col.g = std::max(0, col.g - 10);
-                                sel->setSideColor(selectedIndex, col);
+                            if (auto* poly = dynamic_cast<PolylineFigure*>(sel)) {
+                                int numSides = poly->getThicknesses().size();
+                                if (selectedIndex < numSides) {
+                                    sf::Color col = poly->getSideColor(selectedIndex);
+                                    if (event.key.shift) col.g = std::min(255, col.g + 10);
+                                    else col.g = std::max(0, col.g - 10);
+                                    poly->setSideColor(selectedIndex, col);
+                                }
                             }
                         } else {
                             if (event.key.shift) currentOutlineColor.g = std::min(255, currentOutlineColor.g + 10);
@@ -749,12 +826,14 @@ int main() {
                         }
                     } else if (currentMode == Mode::COLOR) {
                         if (auto* sel = editor.getSelected()) {
-                            int numSides = sel->getThicknesses().size();
-                            if (selectedIndex < numSides) {
-                                sf::Color col = sel->getSideColor(selectedIndex);
-                                if (event.key.shift) col.b = std::min(255, col.b + 10);
-                                else col.b = std::max(0, col.b - 10);
-                                sel->setSideColor(selectedIndex, col);
+                            if (auto* poly = dynamic_cast<PolylineFigure*>(sel)) {
+                                int numSides = poly->getThicknesses().size();
+                                if (selectedIndex < numSides) {
+                                    sf::Color col = poly->getSideColor(selectedIndex);
+                                    if (event.key.shift) col.b = std::min(255, col.b + 10);
+                                    else col.b = std::max(0, col.b - 10);
+                                    poly->setSideColor(selectedIndex, col);
+                                }
                             }
                         } else {
                             if (event.key.shift) currentOutlineColor.b = std::min(255, currentOutlineColor.b + 10);
@@ -766,52 +845,128 @@ int main() {
                     }
                 }
 
-                // Обработка T для толщины
+                // Группировка: Ctrl+G (добавить выделенную в список) и Ctrl+Shift+G (создать композит)
+                if (event.key.control && event.key.code == sf::Keyboard::G && !event.key.shift) {
+                    if (auto* sel = editor.getSelected()) {
+                        selectedFigures.push_back(sel);
+                    }
+                }
+                if (event.key.control && event.key.shift && event.key.code == sf::Keyboard::G) {
+                    if (!selectedFigures.empty()) {
+                        auto composite = std::make_unique<CompositeFigure>();
+                        sf::Vector2f centerSum(0,0);
+                        for (auto* fig : selectedFigures) {
+                            centerSum += fig->getPosition();
+                        }
+                        sf::Vector2f center = centerSum / (float)selectedFigures.size();
+                        composite->setPosition(center);
+                        for (auto* fig : selectedFigures) {
+                            sf::Vector2f localOffset = fig->getPosition() - center;
+                            // Перемещаем владение из редактора? Для этого нужно изъять фигуру из editor.
+                            // Пока просто скопируем (нужен clone). Для демо оставим так, но потом надо реализовать.
+                            // В целях демонстрации предположим, что у фигур есть clone().
+                            // Здесь будет ошибка компиляции, если не реализовать clone.
+                            // Пока закомментируем.
+                            // composite->addFigure(std::unique_ptr<AbstractFigure>(fig->clone()), localOffset);
+                        }
+                        // editor.addFigure(std::move(composite));
+                        selectedFigures.clear();
+                    }
+                }
+
+                // Разгруппировка выделенного композита по U
+                if (event.key.code == sf::Keyboard::U && !event.key.control && !event.key.shift) {
+                    if (auto* sel = editor.getSelected()) {
+                        if (auto* comp = dynamic_cast<CompositeFigure*>(sel)) {
+                            // Извлечь дочерние фигуры и добавить их в редактор
+                            for (size_t i = 0; i < comp->getFigureCount(); ++i) {
+                                // нужно изъять владение из композита – для этого нужны дополнительные методы
+                                // пока пропустим
+                            }
+                        }
+                    }
+                }
+
+                // Новая полилиния (N)
+                if (event.key.code == sf::Keyboard::N && !creatingPolyline && !nameInputActive) {
+                    // Активируем ввод имени
+                    nameInputBox.setPosition(window.getSize().x/2 - 100, window.getSize().y/2 - 15);
+                    nameInputBox.setSize(200, 30);
+                    nameInputBox.activate(0);
+                    nameInputBox.setLabel("Enter polyline name:");
+                    nameInputActive = true;
+                    newPolyline = std::make_unique<PolylineFigure>(currentOutlineColor, std::vector<float>{2});
+                    creatingPolyline = true;
+                }
+
+                // Завершение создания полилинии по Enter (когда имя введено)
+                if (event.key.code == sf::Keyboard::Enter && creatingPolyline && !nameInputActive) {
+                    if (newPolyline->getVertexCount() > 0) {
+                        sf::Vector2f sum(0,0);
+                        for (size_t i = 0; i < newPolyline->getVertexCount(); ++i) {
+                            sum += newPolyline->getLocalVertex(i);
+                        }
+                        sf::Vector2f center = sum / (float)newPolyline->getVertexCount();
+                        newPolyline->setPosition(center);
+                        for (size_t i = 0; i < newPolyline->getVertexCount(); ++i) {
+                            sf::Vector2f loc = newPolyline->getLocalVertex(i) - center;
+                            newPolyline->setLocalVertex(i, loc);
+                        }
+                        editor.addFigure(std::move(newPolyline));
+                    }
+                    creatingPolyline = false;
+                    newPolyline.reset();
+                }
+
+                // T – толщина
                 if (event.key.code == sf::Keyboard::T) {
                     if (auto* sel = editor.getSelected()) {
-                        int numSides = sel->getThicknesses().size();
-                        if (selectedIndex < numSides) {
-                            int newThick = (int)sel->getThicknesses()[selectedIndex];
-                            if (event.key.shift) newThick = std::max(1, newThick - 1);
-                            else newThick += 1;
-                            sel->setThickness(selectedIndex, newThick);
+                        if (auto* poly = dynamic_cast<PolylineFigure*>(sel)) {
+                            int numSides = poly->getThicknesses().size();
+                            if (selectedIndex < numSides) {
+                                float newThick = poly->getThicknesses()[selectedIndex];
+                                if (event.key.shift) newThick = std::max(1.0f, newThick - 1.0f);
+                                else newThick += 1.0f;
+                                poly->setThickness(selectedIndex, newThick);
+                            }
                         }
                     } else {
                         int maxIndex = 0;
-                        switch (currentShape) {
-                            case ShapeType::Rectangle: maxIndex = 4; break;
-                            case ShapeType::Triangle: maxIndex = 3; break;
-                            case ShapeType::Trapezoid: maxIndex = 4; break;
-                            case ShapeType::Circle: maxIndex = 1; break;
-                            case ShapeType::Pentagon: maxIndex = 5; break;
-                            case ShapeType::Hexagon: maxIndex = 6; break;
+                        switch (currentBuiltin) {
+                            case BuiltinType::Rectangle: maxIndex = 4; break;
+                            case BuiltinType::Triangle: maxIndex = 3; break;
+                            case BuiltinType::Trapezoid: maxIndex = 4; break;
+                            case BuiltinType::Circle: maxIndex = 1; break;
+                            case BuiltinType::Pentagon: maxIndex = 5; break;
+                            case BuiltinType::Hexagon: maxIndex = 6; break;
                         }
                         if (maxIndex > 0 && selectedIndex < maxIndex) {
-                            int newThick = currentThicknesses[selectedIndex];
-                            if (event.key.shift) newThick = std::max(1, newThick - 1);
-                            else newThick += 1;
+                            float newThick = currentThicknesses[selectedIndex];
+                            if (event.key.shift) newThick = std::max(1.0f, newThick - 1.0f);
+                            else newThick += 1.0f;
                             currentThicknesses[selectedIndex] = newThick;
                         }
                     }
                 }
 
-                // Обработка Y для переключения индекса
+                // Y – переключение индекса
                 if (event.key.code == sf::Keyboard::Y && !event.key.shift) {
                     int maxIndex = 0;
                     if (editor.getSelected()) {
                         if (currentMode == Mode::VERTEX) {
                             maxIndex = editor.getSelected()->getVertexCount();
                         } else {
-                            maxIndex = editor.getSelected()->getThicknesses().size();
+                            if (auto* poly = dynamic_cast<PolylineFigure*>(editor.getSelected()))
+                                maxIndex = poly->getThicknesses().size();
                         }
                     } else {
-                        switch (currentShape) {
-                            case ShapeType::Rectangle: maxIndex = 4; break;
-                            case ShapeType::Triangle: maxIndex = 3; break;
-                            case ShapeType::Trapezoid: maxIndex = 4; break;
-                            case ShapeType::Circle: maxIndex = 1; break;
-                            case ShapeType::Pentagon: maxIndex = 5; break;
-                            case ShapeType::Hexagon: maxIndex = 6; break;
+                        switch (currentBuiltin) {
+                            case BuiltinType::Rectangle: maxIndex = 4; break;
+                            case BuiltinType::Triangle: maxIndex = 3; break;
+                            case BuiltinType::Trapezoid: maxIndex = 4; break;
+                            case BuiltinType::Circle: maxIndex = 1; break;
+                            case BuiltinType::Pentagon: maxIndex = 5; break;
+                            case BuiltinType::Hexagon: maxIndex = 6; break;
                         }
                     }
                     if (maxIndex > 0) {
@@ -819,35 +974,35 @@ int main() {
                     }
                 }
 
-                // Добавление новой фигуры (Space)
-                if (event.key.code == sf::Keyboard::Space) {
+                // Space – добавить новую встроенную фигуру
+                if (event.key.code == sf::Keyboard::Space && !creatingPolyline) {
                     std::vector<float> thicknesses;
                     sf::Vector2u winSize = window.getSize();
                     sf::Vector2f center(winSize.x / 2.f, winSize.y / 2.f);
-                    std::unique_ptr<Figure> newFig;
+                    std::unique_ptr<AbstractFigure> newFig;
 
-                    switch (currentShape) {
-                        case ShapeType::Rectangle:
+                    switch (currentBuiltin) {
+                        case BuiltinType::Rectangle:
                             thicknesses.assign(currentThicknesses.begin(), currentThicknesses.begin()+4);
                             newFig = std::make_unique<Rectangle>(rectWidth, rectHeight, currentOutlineColor, thicknesses);
                             break;
-                        case ShapeType::Triangle:
+                        case BuiltinType::Triangle:
                             thicknesses.assign(currentThicknesses.begin(), currentThicknesses.begin()+3);
                             newFig = std::make_unique<Triangle>(triSide, currentOutlineColor, thicknesses);
                             break;
-                        case ShapeType::Trapezoid:
+                        case BuiltinType::Trapezoid:
                             thicknesses.assign(currentThicknesses.begin(), currentThicknesses.begin()+4);
                             newFig = std::make_unique<Trapezoid>(trapTop, trapBottom, trapHeight, currentOutlineColor, thicknesses);
                             break;
-                        case ShapeType::Circle:
-                            thicknesses = {(float)currentThicknesses[0]};
+                        case BuiltinType::Circle:
+                            thicknesses = {currentThicknesses[0]};
                             newFig = std::make_unique<Circle>(circleRadius, currentOutlineColor, thicknesses);
                             break;
-                        case ShapeType::Pentagon:
+                        case BuiltinType::Pentagon:
                             thicknesses.assign(currentThicknesses.begin(), currentThicknesses.begin()+5);
                             newFig = std::make_unique<Pentagon>(pentRadius, currentOutlineColor, thicknesses);
                             break;
-                        case ShapeType::Hexagon:
+                        case BuiltinType::Hexagon:
                             thicknesses.assign(currentThicknesses.begin(), currentThicknesses.begin()+6);
                             newFig = std::make_unique<Hexagon>(hexRadius, currentOutlineColor, thicknesses);
                             break;
@@ -860,13 +1015,14 @@ int main() {
                     }
                 }
 
-                // Удаление выделенной фигуры
+                // Delete – удаление выделенной фигуры
                 if (event.key.code == sf::Keyboard::Delete) {
                     editor.removeSelected();
                 }
             }
         }
 
+        // Применение значения из inputBox после деактивации
         if (!inputBox.isActive() && currentEditTarget != EditTarget::NONE) {
             float val = inputBox.getValue();
             if (auto* sel = editor.getSelected()) {
@@ -908,8 +1064,10 @@ int main() {
                         break;
                     }
                     case EditTarget::THICKNESS: {
-                        int intVal = std::round(val);
-                        sel->setThickness(editIndex, intVal);
+                        if (auto* poly = dynamic_cast<PolylineFigure*>(sel)) {
+                            float intVal = std::round(val);
+                            poly->setThickness(editIndex, intVal);
+                        }
                         break;
                     }
                     default: break;
@@ -928,6 +1086,8 @@ int main() {
         }
         inputBox.update();
         inputBox.draw(window);
+        nameInputBox.update();
+        nameInputBox.draw(window);
         window.draw(exitButton);
         window.display();
     }
