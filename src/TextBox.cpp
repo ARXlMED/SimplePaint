@@ -49,9 +49,7 @@ void TextBox::deactivate() {
     if (!m_inputString.empty()) {
         try {
             m_value = std::stof(m_inputString);
-        } catch (...) {
-            // оставляем старое значение
-        }
+        } catch (...) {}
     }
     m_inputString.clear();
 }
@@ -91,7 +89,6 @@ void TextBox::handleEvent(const sf::Event& event) {
 
 void TextBox::update() {
     if (!m_active) return;
-    // Мигание курсора каждые 0.5 секунды
     if (m_cursorClock.getElapsedTime().asSeconds() > 0.5f) {
         m_showCursor = !m_showCursor;
         m_cursorClock.restart();
@@ -102,7 +99,6 @@ void TextBox::draw(sf::RenderWindow& window) const {
     if (!m_active) return;
     window.draw(m_background);
     window.draw(m_text);
-    // Рисуем курсор
     if (m_showCursor) {
         sf::FloatRect textBounds = m_text.getLocalBounds();
         float cursorX = m_text.getPosition().x + textBounds.width + 2;

@@ -58,10 +58,57 @@ AbstractFigure* Editor::getSelected() const {
     return selectedFigure;
 }
 
+void Editor::setSelected(AbstractFigure* fig) {
+    selectedFigure = fig;
+}
+
 void Editor::handleScale(float delta) {
     if (selectedFigure) {
         float newScale = selectedFigure->getScale() * (1.0f + delta * 0.1f);
         if (newScale > 0.1f && newScale < 5.0f)
             selectedFigure->setScale(newScale);
     }
+}
+
+AbstractFigure* Editor::findFigureAt(const sf::Vector2f& point) {
+    for (auto it = figures.rbegin(); it != figures.rend(); ++it) {
+        if ((*it)->contains(point))
+            return it->get();
+    }
+    return nullptr;
+}
+
+bool Editor::removeFigure(AbstractFigure* fig) {
+    auto it = std::find_if(figures.begin(), figures.end(),
+        [fig](const std::unique_ptr<AbstractFigure>& ptr) { return ptr.get() == fig; });
+    if (it != figures.end()) {
+        if (selectedFigure == fig) selectedFigure = nullptr;
+        figures.erase(it);
+        return true;
+    }
+    return false;
+}
+
+std::unique_ptr<AbstractFigure> Editor::releaseFigure(AbstractFigure* fig) {
+    auto it = std::find_if(figures.begin(), figures.end(),
+        [fig](const std::unique_ptr<AbstractFigure>& ptr) { return ptr.get() == fig; });
+    if (it != figures.end()) {
+        if (selectedFigure == fig) selectedFigure = nullptr;
+        auto ptr = std::move(*it);
+        figures.erase(it);
+        return ptr;
+    }
+    return nullptr;
+}
+
+size_t Editor::getFigureCount() const {
+    return figures.size();
+}
+
+AbstractFigure* Editor::getFigure(size_t index) {
+    return (index < figures.size()) ? figures[index].get() : nullptr;
+}
+
+const std::vector<std::unique_ptr<AbstractFigure>>& Editor::getFigures() const {
+    return figures;
 }

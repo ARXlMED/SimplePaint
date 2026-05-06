@@ -9,6 +9,7 @@ public:
     void draw(sf::RenderWindow& window) const override;
     bool contains(const sf::Vector2f& point) const override;
     sf::FloatRect getBoundingBox() const override;
+    std::unique_ptr<AbstractFigure> clone() const override;
 
     void addFigure(std::unique_ptr<AbstractFigure> fig, const sf::Vector2f& localPos);
     void removeFigure(size_t index);
@@ -18,7 +19,7 @@ public:
 private:
     struct Child {
         std::unique_ptr<AbstractFigure> figure;
-        sf::Vector2f localOffset; // относительно центра композита
+        sf::Vector2f localOffset;
     };
     std::vector<Child> children;
 };

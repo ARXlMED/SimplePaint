@@ -3,6 +3,19 @@
 
 CompositeFigure::CompositeFigure() : AbstractFigure() {}
 
+std::unique_ptr<AbstractFigure> CompositeFigure::clone() const {
+    auto newComp = std::make_unique<CompositeFigure>();
+    newComp->position = position;
+    newComp->scaleFactor = scaleFactor;
+    newComp->fillColor = fillColor;
+    newComp->filled = filled;
+    newComp->pivot = pivot;
+    for (const auto& child : children) {
+        newComp->addFigure(child.figure->clone(), child.localOffset);
+    }
+    return newComp;
+}
+
 void CompositeFigure::addFigure(std::unique_ptr<AbstractFigure> fig, const sf::Vector2f& localPos) {
     children.push_back({std::move(fig), localPos});
 }
@@ -15,7 +28,7 @@ void CompositeFigure::removeFigure(size_t index) {
 void CompositeFigure::draw(sf::RenderWindow& window) const {
     for (const auto& child : children) {
         sf::Vector2f originalPos = child.figure->getPosition();
-        child.figure->setPosition(position + child.localOffset * scaleFactor);
+        child.figure->setPosition(position + child.localOffset);
         child.figure->draw(window);
         child.figure->setPosition(originalPos);
     }
@@ -24,7 +37,7 @@ void CompositeFigure::draw(sf::RenderWindow& window) const {
 bool CompositeFigure::contains(const sf::Vector2f& point) const {
     for (const auto& child : children) {
         sf::Vector2f originalPos = child.figure->getPosition();
-        child.figure->setPosition(position + child.localOffset * scaleFactor);
+        child.figure->setPosition(position + child.localOffset);
         bool res = child.figure->contains(point);
         child.figure->setPosition(originalPos);
         if (res) return true;
@@ -37,7 +50,7 @@ sf::FloatRect CompositeFigure::getBoundingBox() const {
     sf::FloatRect total;
     for (const auto& child : children) {
         sf::Vector2f originalPos = child.figure->getPosition();
-        child.figure->setPosition(position + child.localOffset * scaleFactor);
+        child.figure->setPosition(position + child.localOffset);
         sf::FloatRect box = child.figure->getBoundingBox();
         child.figure->setPosition(originalPos);
         if (total.width == 0) total = box;

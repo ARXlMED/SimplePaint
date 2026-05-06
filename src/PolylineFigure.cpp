@@ -7,6 +7,21 @@ PolylineFigure::PolylineFigure(const sf::Color& outlineColor, const std::vector<
     sideColors.assign(thicknesses.size(), outlineColor);
 }
 
+std::unique_ptr<AbstractFigure> PolylineFigure::clone() const {
+    auto newFig = std::make_unique<PolylineFigure>(
+        sideColors.empty() ? sf::Color::White : sideColors[0],
+        thicknesses
+    );
+    newFig->vertices = vertices;
+    newFig->sideColors = sideColors;
+    newFig->position = position;
+    newFig->scaleFactor = scaleFactor;
+    newFig->fillColor = fillColor;
+    newFig->filled = filled;
+    newFig->pivot = pivot;
+    return newFig;
+}
+
 void PolylineFigure::draw(sf::RenderWindow& window) const {
     if (vertices.size() < 2) return;
 
@@ -15,7 +30,6 @@ void PolylineFigure::draw(sf::RenderWindow& window) const {
         global.push_back(position + v * scaleFactor);
     size_t n = global.size();
 
-    // Заливка (только если фигура замкнута и есть минимум 3 вершины)
     if (filled && n >= 3) {
         sf::ConvexShape fillShape;
         fillShape.setPointCount(n);
@@ -25,7 +39,6 @@ void PolylineFigure::draw(sf::RenderWindow& window) const {
         window.draw(fillShape);
     }
 
-    // Вычисляем точки пересечения для каждой вершины (внешние и внутренние)
     std::vector<sf::Vector2f> outPoint(n), inPoint(n);
     for (size_t i = 0; i < n; ++i) {
         size_t prev = (i + n - 1) % n;
@@ -38,8 +51,8 @@ void PolylineFigure::draw(sf::RenderWindow& window) const {
         float t_prev = thicknesses[prev];
         float t_next = thicknesses[i];
 
-        sf::Vector2f dir_prev = V - P;  // направление от предыдущей к текущей
-        sf::Vector2f dir_next = N - V;  // направление от текущей к следующей
+        sf::Vector2f dir_prev = V - P;
+        sf::Vector2f dir_next = N - V;
         float len_prev = std::sqrt(dir_prev.x * dir_prev.x + dir_prev.y * dir_prev.y);
         float len_next = std::sqrt(dir_next.x * dir_next.x + dir_next.y * dir_next.y);
         if (len_prev < 1e-6 || len_next < 1e-6) {
@@ -50,13 +63,11 @@ void PolylineFigure::draw(sf::RenderWindow& window) const {
         dir_prev /= len_prev;
         dir_next /= len_next;
 
-        // Внешние нормали (поворот на -90°)
         sf::Vector2f norm_out_prev(-dir_prev.y, dir_prev.x);
         sf::Vector2f norm_out_next(-dir_next.y, dir_next.x);
         sf::Vector2f norm_in_prev = -norm_out_prev;
         sf::Vector2f norm_in_next = -norm_out_next;
 
-        // Точки на внешних и внутренних линиях у вершины
         sf::Vector2f A_out = V + norm_out_prev * (t_prev / 2.f);
         sf::Vector2f B_out = V + norm_out_next * (t_next / 2.f);
         sf::Vector2f A_in  = V + norm_in_prev * (t_prev / 2.f);
@@ -64,7 +75,6 @@ void PolylineFigure::draw(sf::RenderWindow& window) const {
 
         float det = dir_prev.x * dir_next.y - dir_prev.y * dir_next.x;
         if (std::abs(det) < 1e-6) {
-            // Почти параллельны – берём среднюю точку
             outPoint[i] = (A_out + B_out) / 2.f;
             inPoint[i]  = (A_in + B_in) / 2.f;
         } else {
@@ -78,7 +88,6 @@ void PolylineFigure::draw(sf::RenderWindow& window) const {
         }
     }
 
-    // Рисуем стороны как четырёхугольники (трапеции)
     for (size_t i = 0; i < n; ++i) {
         size_t j = (i + 1) % n;
         sf::ConvexShape quad;

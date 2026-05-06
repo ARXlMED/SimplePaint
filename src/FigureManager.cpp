@@ -5,20 +5,32 @@ FigureManager& FigureManager::instance() {
     return inst;
 }
 
-void FigureManager::registerType(const std::string& name, Creator creator) {
-    creators[name] = creator;
+void FigureManager::registerFactory(const std::string& name, Factory factory) {
+    entries[name] = {Entry::FACTORY, factory, nullptr};
+}
+
+void FigureManager::registerPrototype(const std::string& name, std::unique_ptr<AbstractFigure> prototype) {
+    entries[name] = {Entry::PROTOTYPE, nullptr, std::move(prototype)};
+}
+
+bool FigureManager::hasFigure(const std::string& name) const {
+    return entries.find(name) != entries.end();
+}
+
+std::unique_ptr<AbstractFigure> FigureManager::create(const std::string& name) const {
+    auto it = entries.find(name);
+    if (it == entries.end()) return nullptr;
+    const auto& e = it->second;
+    if (e.type == Entry::FACTORY) {
+        return e.factory();
+    } else {
+        return e.prototype->clone();
+    }
 }
 
 std::vector<std::string> FigureManager::getTypeNames() const {
     std::vector<std::string> names;
-    for (const auto& pair : creators)
-        names.push_back(pair.first);
+    for (const auto& p : entries)
+        names.push_back(p.first);
     return names;
-}
-
-std::unique_ptr<AbstractFigure> FigureManager::create(const std::string& name, const sf::Color& color, const std::vector<float>& thicknesses) const {
-    auto it = creators.find(name);
-    if (it != creators.end())
-        return it->second(color, thicknesses);
-    return nullptr;
 }
