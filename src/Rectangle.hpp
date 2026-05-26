@@ -4,4 +4,5 @@
 class Rectangle : public PolylineFigure {
 public:
     Rectangle(float width, float height, const sf::Color& color, const std::vector<float>& thicknesses);
+    std::string getTypeName() const { return "Rectangle"; }
 };

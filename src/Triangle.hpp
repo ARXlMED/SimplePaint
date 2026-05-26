@@ -4,4 +4,6 @@
 class Triangle : public PolylineFigure {
 public:
     Triangle(float side, const sf::Color& color, const std::vector<float>& thicknesses);
+    std::string getTypeName() const { return "Triangle"; }
+
 };

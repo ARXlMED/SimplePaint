@@ -4,4 +4,6 @@
 class Hexagon : public PolylineFigure {
 public:
     Hexagon(float radius, const sf::Color& color, const std::vector<float>& thicknesses);
+        std::string getTypeName() const { return "Hexagon"; }
+
 };

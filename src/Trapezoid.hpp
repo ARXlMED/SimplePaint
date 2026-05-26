@@ -5,4 +5,6 @@ class Trapezoid : public PolylineFigure {
 public:
     Trapezoid(float topBase, float bottomBase, float height,
               const sf::Color& color, const std::vector<float>& thicknesses);
+    std::string getTypeName() const { return "Trapezoid"; }
+
 };

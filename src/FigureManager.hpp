@@ -2,6 +2,7 @@
 #include "AbstractFigure.hpp"
 #include <functional>
 #include <map>
+#include <memory>
 
 class FigureManager {
 public:

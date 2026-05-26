@@ -8,4 +8,5 @@ Rectangle::Rectangle(float width, float height, const sf::Color& color, const st
         { width/2,  height/2},
         {-width/2,  height/2}
     };
+    
 }

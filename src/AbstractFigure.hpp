@@ -2,6 +2,7 @@
 #include <SFML/Graphics.hpp>
 #include <vector>
 #include <memory>
+#include <fstream>
 
 class AbstractFigure {
 public:
@@ -37,6 +38,18 @@ public:
     void setLocalPivot(const sf::Vector2f& p);
     void movePivot(const sf::Vector2f& delta);
 
+    void setTypeName(const std::string& name) { typeName = name; }
+    std::string getTypeName() const { return typeName; }
+
+    void setCustomName(const std::string& name) { customName = name; }
+    std::string getCustomName() const { 
+        return customName.empty() ? getTypeName() : customName; 
+    }
+    
+    virtual void serialize(std::ostream& out) const = 0;
+    virtual void deserialize(std::istream& in);
+
+
 protected:
     sf::Vector2f position;
     float scaleFactor;
@@ -44,4 +57,6 @@ protected:
     bool filled;
     std::vector<sf::Vector2f> vertices;
     sf::Vector2f pivot;
+    std::string typeName = "Figure";
+    std::string customName;
 };

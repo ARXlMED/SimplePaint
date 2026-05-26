@@ -1,9 +1,11 @@
 #include "TextBox.hpp"
 #include <sstream>
 #include <cctype>
+#include <SFML/System/String.hpp>   // для корректного преобразования Unicode
 
 TextBox::TextBox(const sf::Font& font, unsigned int charSize)
-    : m_font(font), m_active(false), m_value(0.f), m_showCursor(false) {
+    : m_font(font), m_active(false), m_value(0.f), m_showCursor(false), m_textMode(false)
+{
     m_text.setFont(m_font);
     m_text.setCharacterSize(charSize);
     m_text.setFillColor(sf::Color::Black);
@@ -36,9 +38,14 @@ void TextBox::setLabel(const std::string& label) {
 void TextBox::activate(float initialValue) {
     m_active = true;
     m_value = initialValue;
-    std::ostringstream oss;
-    oss << initialValue;
-    m_inputString = oss.str();
+    if (m_textMode) {
+        // В текстовом режиме поле начинается пустым, значение не показываем
+        m_inputString.clear();
+    } else {
+        std::ostringstream oss;
+        oss << initialValue;
+        m_inputString = oss.str();
+    }
     m_text.setString(m_inputString);
     m_cursorClock.restart();
     m_showCursor = true;
@@ -46,12 +53,14 @@ void TextBox::activate(float initialValue) {
 
 void TextBox::deactivate() {
     m_active = false;
-    if (!m_inputString.empty()) {
+    if (!m_inputString.empty() && !m_textMode) {
         try {
             m_value = std::stof(m_inputString);
-        } catch (...) {}
+        } catch (...) {
+            // Оставляем предыдущее значение, если парсинг не удался
+        }
     }
-    m_inputString.clear();
+    // В текстовом режиме m_value не обновляем (оно не используется)
 }
 
 bool TextBox::isActive() const {
@@ -69,13 +78,35 @@ std::string TextBox::getString() const {
 void TextBox::handleEvent(const sf::Event& event) {
     if (!m_active) return;
     if (event.type == sf::Event::TextEntered) {
-        char c = static_cast<char>(event.text.unicode);
-        if (std::isdigit(c) || c == '-' || c == '.') {
-            m_inputString += c;
-            m_text.setString(m_inputString);
-        } else if (c == '\b' && !m_inputString.empty()) {
-            m_inputString.pop_back();
-            m_text.setString(m_inputString);
+        // Получаем UTF-32 код символа
+        sf::Uint32 unicode = event.text.unicode;
+
+        // Обработка Backspace (код 8)
+        if (unicode == 8) {
+            if (!m_inputString.empty()) {
+                m_inputString.pop_back();
+                m_text.setString(m_inputString);
+            }
+            return;
+        }
+
+        if (m_textMode) {
+            // В текстовом режиме принимаем любые не-управляющие символы
+            if (unicode >= 32 && unicode != 127) {
+                // Преобразуем UTF-32 в UTF-8 строку
+                sf::String sfstr(unicode);
+                // toUtf8() возвращает std::basic_string<sf::Uint8>, преобразуем в std::string
+                auto utf8tmp = sfstr.toUtf8();
+                std::string utf8char(reinterpret_cast<const char*>(utf8tmp.c_str()), utf8tmp.size());
+                m_inputString += utf8char;
+                m_text.setString(m_inputString);
+            }
+        } else {
+            // Числовой режим: только цифры, '-' и '.'
+            if (unicode == '-' || unicode == '.' || (unicode >= '0' && unicode <= '9')) {
+                m_inputString += static_cast<char>(unicode);
+                m_text.setString(m_inputString);
+            }
         }
     } else if (event.type == sf::Event::KeyPressed) {
         if (event.key.code == sf::Keyboard::Enter) {
@@ -110,4 +141,13 @@ void TextBox::draw(sf::RenderWindow& window) const {
         window.draw(cursor);
     }
     window.draw(m_label);
+}
+
+void TextBox::setTextMode(bool textMode) {
+    m_textMode = textMode;
+}
+
+void TextBox::setString(const std::string& text) {
+    m_inputString = text;
+    m_text.setString(m_inputString);
 }

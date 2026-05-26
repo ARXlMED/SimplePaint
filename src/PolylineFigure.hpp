@@ -18,6 +18,12 @@ public:
     void addVertex(const sf::Vector2f& pos) override;
     void removeVertex(size_t index) override;
 
+    void serialize(std::ostream& out) const override;
+    void deserialize(std::istream& in) override;
+
+    std::string getTypeName() const { return "Polyline"; }
+
+
 protected:
     std::vector<float> thicknesses;
     std::vector<sf::Color> sideColors;

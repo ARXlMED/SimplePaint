@@ -155,3 +155,93 @@ void PolylineFigure::removeVertex(size_t index) {
         sideColors.erase(sideColors.begin() + index);
     }
 }
+/*
+void PolylineFigure::serialize(std::ostream& out) const {
+    AbstractFigure::serialize(out);
+    size_t n = vertices.size();
+    out << n << '\n';
+    for (size_t i = 0; i < n; ++i) {
+        out << vertices[i].x << ' ' << vertices[i].y << ' ';
+    }
+    out << '\n';
+    for (size_t i = 0; i < n; ++i) {
+        out << thicknesses[i] << ' ';
+    }
+    out << '\n';
+    for (size_t i = 0; i < n; ++i) {
+        out << (int)sideColors[i].r << ' ' << (int)sideColors[i].g << ' ' << (int)sideColors[i].b << ' ';
+    }
+    out << '\n';
+}
+
+void PolylineFigure::deserialize(std::istream& in) {
+    AbstractFigure::deserialize(in);
+    size_t n;
+    in >> n;
+    vertices.resize(n);
+    thicknesses.resize(n);
+    sideColors.resize(n);
+
+    for (size_t i = 0; i < n; ++i) {
+        in >> vertices[i].x >> vertices[i].y;
+    }
+    for (size_t i = 0; i < n; ++i) {
+        in >> thicknesses[i];
+    }
+    for (size_t i = 0; i < n; ++i) {
+        int r,g,b;
+        in >> r >> g >> b;
+        sideColors[i] = sf::Color(r,g,b);
+    }
+}
+*/
+
+
+void PolylineFigure::serialize(std::ostream& out) const {
+    AbstractFigure::serialize(out);
+    size_t n = vertices.size();
+    out << n << '\n';
+    for (size_t i = 0; i < n; ++i) 
+        out << vertices[i].x << ' ' << vertices[i].y << ' ';
+    out << '\n';
+    
+    // Записываем n толщин и n цветов (для замкнутого контура)
+    for (size_t i = 0; i < n; ++i) {
+        float t = (i < thicknesses.size()) ? thicknesses[i] : 2.0f; // запасной вариант
+        out << t << ' ';
+    }
+    out << '\n';
+    for (size_t i = 0; i < n; ++i) {
+        sf::Color c = (i < sideColors.size()) ? sideColors[i] : sf::Color::White;
+        out << (int)c.r << ' ' << (int)c.g << ' ' << (int)c.b << ' ';
+    }
+    out << '\n';
+}
+
+void PolylineFigure::deserialize(std::istream& in) {
+    AbstractFigure::deserialize(in); // Сначала читаем общие данные
+
+    size_t n;
+    if (!(in >> n)) return;
+
+    vertices.resize(n);
+    thicknesses.resize(n);
+    sideColors.resize(n);
+
+    // Читаем координаты всех вершин
+    for (size_t i = 0; i < n; ++i) {
+        in >> vertices[i].x >> vertices[i].y;
+    }
+
+    // Читаем толщины
+    for (size_t i = 0; i < n; ++i) {
+        in >> thicknesses[i];
+    }
+
+    // Читаем цвета сторон
+    for (size_t i = 0; i < n; ++i) {
+        int r, g, b;
+        in >> r >> g >> b;
+        sideColors[i] = sf::Color(r, g, b);
+    }
+}

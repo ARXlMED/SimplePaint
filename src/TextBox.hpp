@@ -16,6 +16,8 @@ public:
     bool isActive() const;
     float getValue() const;
     std::string getString() const;
+    void setTextMode(bool textMode);
+    void setString(const std::string& text);
 
 private:
     sf::Font m_font;
@@ -29,4 +31,5 @@ private:
     bool m_showCursor;
     sf::Vector2f m_position;
     sf::Vector2f m_size;
+    bool m_textMode;
 };

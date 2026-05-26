@@ -1,5 +1,7 @@
 #include "AbstractFigure.hpp"
 #include <cmath>
+#include <iostream>
+#include <fstream>
 
 AbstractFigure::AbstractFigure() : position(0,0), scaleFactor(1.f), fillColor(sf::Color::White), filled(false), pivot(0,0) {}
 
@@ -27,3 +29,25 @@ sf::Vector2f AbstractFigure::getLocalPivot() const { return pivot; }
 sf::Vector2f AbstractFigure::getGlobalPivot() const { return position + pivot * scaleFactor; }
 void AbstractFigure::setLocalPivot(const sf::Vector2f& p) { pivot = p; }
 void AbstractFigure::movePivot(const sf::Vector2f& delta) { pivot += delta; }
+
+void AbstractFigure::serialize(std::ostream& out) const {
+    // Используем виртуальную функцию, так как поле typeName пустое
+    out << getTypeName() << '\n'; 
+    out << getCustomName() << "\n";
+    out << position.x << ' ' << position.y << ' '
+        << scaleFactor << ' '
+        << (int)fillColor.r << ' ' << (int)fillColor.g << ' ' << (int)fillColor.b << ' '
+        << filled << ' '
+        << pivot.x << ' ' << pivot.y << '\n';
+}
+
+void AbstractFigure::deserialize(std::istream& in) {
+    int r, g, b;
+    in >> customName;
+    in >> position.x >> position.y
+       >> scaleFactor
+       >> r >> g >> b
+       >> filled
+       >> pivot.x >> pivot.y;
+    fillColor = sf::Color(r, g, b);
+}

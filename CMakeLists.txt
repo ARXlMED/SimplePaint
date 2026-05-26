@@ -3,21 +3,14 @@ project(MyGame)
 
 set(CMAKE_CXX_STANDARD 17)
 
-include(FetchContent)
-FetchContent_Declare(
-    SFML
-    GIT_REPOSITORY https://github.com/SFML/SFML.git
-    GIT_TAG 2.6.1
-)
-FetchContent_MakeAvailable(SFML)
+set(SFML_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sfml/lib/cmake)
 
-set(SOURCES
+add_executable(${PROJECT_NAME}
     src/main.cpp
     src/AbstractFigure.cpp
     src/PolylineFigure.cpp
     src/CompositeFigure.cpp
     src/FigureManager.cpp
-    src/Figure.cpp
     src/Rectangle.cpp
     src/Triangle.cpp
     src/Trapezoid.cpp
@@ -28,5 +21,4 @@ set(SOURCES
     src/TextBox.cpp
 )
 
-add_executable(${PROJECT_NAME} ${SOURCES})
 target_link_libraries(${PROJECT_NAME} PRIVATE sfml-graphics sfml-window sfml-system)
